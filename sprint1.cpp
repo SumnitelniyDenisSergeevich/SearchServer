@@ -8,12 +8,6 @@
 #include <vector>
 #include <execution>
 
-//1. Скомпонуйте объекты в классе
-//2. Не копируйте объекты в циклах.
-//3. Попробуйте улучшить код согласно моим рекомендациям и используя ссылки, что я приложил.
-//4. Не забывайте удалять старые коментарии
-
-//Работа написана неплохо. Нужно привести код в порядок и немного улучшить код. Пока не зачет.
 
 using namespace std;
 
@@ -38,8 +32,7 @@ vector<string> SplitIntoWords(const string& text) {
     for (const char c : text) {
         if (c == ' ') {
             words.push_back(word);
-            //Используйте метод clear
-            word = "";
+            word.clear();
         } else {
             word += c;
         }
@@ -90,16 +83,9 @@ public:
         const Query query = ParseQuery(raw_query);
         auto matched_documents = FindAllDocuments(query, document_filter);
         
-        //Старые коментарии и остатки от нихз всегда удаляем
-        sort(execution::par,matched_documents.begin(), matched_documents.end(),               // 
+        sort(execution::par,matched_documents.begin(), matched_documents.end(),               
              [](const Document& lhs, const Document& rhs) {
-                //Попробуйте использовать тернарный опреатор
-                //https://ravesli.com/urok-41-sizeof-zapyataya-i-uslovnyj-ternarnyj-operator/
-                if (abs(lhs.relevance - rhs.relevance) < 1e-6) {
-                    return lhs.rating > rhs.rating;
-                } else {
-                    return lhs.relevance > rhs.relevance;
-                }
+                return (abs(lhs.relevance - rhs.relevance) < 1e-6) ? (lhs.rating > rhs.rating) : (lhs.relevance > rhs.relevance);
              });
         
         if(matched_documents.size()>MAX_RESULT_DOCUMENT_COUNT){
@@ -124,29 +110,24 @@ public:
         return documents_.size();
     }
     
+    
+    
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
         const Query query = ParseQuery(raw_query);
         vector<string> matched_words;
         for (const string& word : query.plus_words) {
-            if (word_to_document_freqs_.count(word) == 0) {
+            if (!IsContainWord(word)) {
                 continue;
             }
-            if (word_to_document_freqs_.at(word).count(document_id)) {
+            if (IsWordContainId(word, document_id)) {
                 matched_words.push_back(word);
             }
         }
         for (const string& word : query.minus_words) {
-            //1. Данное условие можно вынести в функцию, так как используется несколько раз
-            //Что ниубдь IsContainWord
-            //2. Необязательно сравнивать значение count с нулем, т.к. 0 == false, а все что не ноль == true.
-            //Метод count возвращает либо 0, либо 1 у контейнера map
-            //https://en.cppreference.com/w/cpp/container/map/count
-            if (word_to_document_freqs_.count(word) == 0) {
+            if (!IsContainWord(word)) {
                 continue;
             }
-            //Данное условие можно вынести в функцию, так как используется несколько раз
-            //Что ниубдь IsWordContainId
-            if (word_to_document_freqs_.at(word).count(document_id)) {
+            if (IsWordContainId(word, document_id)) {
                 matched_words.clear();
                 break;
             }
@@ -159,10 +140,37 @@ private:
         int rating;
         DocumentStatus status;
     };
+    
+    struct QueryWord {
+        string data;
+        bool is_minus;
+        bool is_stop;
+    };
+    
+    struct Query {
+        set<string> plus_words;
+        set<string> minus_words;
+    };
 
     set<string> stop_words_;
     map<string, map<int, double>> word_to_document_freqs_;
     map<int, DocumentData> documents_;
+    
+    static int ComputeAverageRating(const vector<int>& ratings) {
+        int rating_sum = 0;
+        for (const int rating : ratings) {
+            rating_sum += rating;
+        }
+        return rating_sum / static_cast<int>(ratings.size());
+    }
+    
+    bool IsContainWord(const string& word) const {
+        return word_to_document_freqs_.count(word);
+    }
+    
+    bool IsWordContainId(const string& word, const int doc_id) const{
+        return word_to_document_freqs_.at(word).count(doc_id);
+    }
     
     bool IsStopWord(const string& word) const {
         return stop_words_.count(word) > 0;
@@ -178,26 +186,9 @@ private:
         return words;
     }
     
-    //Сгруппируйте статические методы в месте отдельном от нестатических. Правильней располагать статические члены перед енстатическими
-    static int ComputeAverageRating(const vector<int>& ratings) {
-        int rating_sum = 0;
-        for (const int rating : ratings) {
-            rating_sum += rating;
-        }
-        return rating_sum / static_cast<int>(ratings.size());
-    }
-    
-    //Сгруппируйте структуры в одном месте
-    struct QueryWord {
-        string data;
-        bool is_minus;
-        bool is_stop;
-    };
-    
     QueryWord ParseQueryWord(string text) const {
         bool is_minus = false;
-        // Word shouldn't be empty
-        if (text[0] == '-') {
+        if (text[0] == '-' && !text.empty()) {
             is_minus = true;
             text = text.substr(1);
         }
@@ -207,24 +198,20 @@ private:
             IsStopWord(text)
         };
     }
-    
-    struct Query {
-        set<string> plus_words;
-        set<string> minus_words;
-    };
+   
     
     Query ParseQuery(const string& text) const {
         Query query;
         for (const string& word : SplitIntoWords(text)) {
             const QueryWord query_word = ParseQueryWord(word);
-            // Можно сделать инверсию условия и избавиться от двойной вложенности
-            //https://overcoder.net/q/17532/%D0%B8%D0%BD%D0%B2%D0%B5%D1%80%D1%82%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D1%82%D1%8C-%D0%BE%D0%BF%D0%B5%D1%80%D0%B0%D1%82%D0%BE%D1%80-if-%D1%87%D1%82%D0%BE%D0%B1%D1%8B-%D1%83%D0%BC%D0%B5%D0%BD%D1%8C%D1%88%D0%B8%D1%82%D1%8C-%D0%B2%D0%BB%D0%BE%D0%B6%D0%B5%D0%BD%D0%BD%D0%BE%D1%81%D1%82%D1%8C
-            if (!query_word.is_stop) {
-                if (query_word.is_minus) {
-                    query.minus_words.insert(query_word.data);
-                } else {
-                    query.plus_words.insert(query_word.data);
-                }
+            
+            if (query_word.is_stop) {
+                continue;
+            }
+            if (query_word.is_minus) {
+                query.minus_words.insert(query_word.data);
+            } else {
+                query.plus_words.insert(query_word.data);
             }
         }
         return query;
@@ -243,8 +230,7 @@ private:
                 continue;
             }
             const double inverse_document_freq = ComputeWordInverseDocumentFreq(word);
-            //Используйте константную ссылку, чтобы не копировать объект
-            for (const auto [document_id, term_freq] : word_to_document_freqs_.at(word)) {
+            for (const auto& [document_id, term_freq] : word_to_document_freqs_.at(word)) {
                 if(pred(document_id, documents_.at(document_id).status, documents_.at(document_id).rating)){
                     document_to_relevance[document_id] += term_freq * inverse_document_freq;
                 }
@@ -255,15 +241,13 @@ private:
             if (word_to_document_freqs_.count(word) == 0) {
                 continue;
             }
-            //Используйте константную ссылку, чтобы не копировать объект
-            for (const auto [document_id, _] : word_to_document_freqs_.at(word)) {
+            for (const auto& [document_id, _] : word_to_document_freqs_.at(word)) {
                 document_to_relevance.erase(document_id);
             }
         }
 
         vector<Document> matched_documents;
-        //Используйте константную ссылку, чтобы не копировать объект
-        for (const auto [document_id, relevance] : document_to_relevance) {
+        for (const auto& [document_id, relevance] : document_to_relevance) {
             matched_documents.push_back({
                 document_id,
                 relevance,
@@ -306,8 +290,8 @@ int main() {
     }
 
     cout << "Even ids:"s << endl;
-    //Лучше вынесите лямбду в переменную, это не критично и код станет понятней.
-    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
+    auto Pred = [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; };
+    for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, Pred)) {
         PrintDocument(document);
     }
 
