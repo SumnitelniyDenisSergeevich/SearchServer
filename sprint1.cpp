@@ -8,6 +8,7 @@
 #include <vector>
 #include <execution>
 
+//Отлично. Зачет. 
 
 using namespace std;
 
@@ -108,9 +109,7 @@ public:
 
     int GetDocumentCount() const {
         return documents_.size();
-    }
-    
-    
+    }   
     
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
         const Query query = ParseQuery(raw_query);
