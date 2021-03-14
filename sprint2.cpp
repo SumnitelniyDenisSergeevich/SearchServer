@@ -9,8 +9,6 @@
 #include <execution>
 #include <numeric>
 
-//Отлично. Зачет. 
-
 using namespace std;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
