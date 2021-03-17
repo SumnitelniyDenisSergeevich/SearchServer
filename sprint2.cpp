@@ -86,8 +86,8 @@ public:
 
         sort(execution::par, matched_documents.begin(), matched_documents.end(),
             [](const Document& lhs, const Document& rhs) {
-            return (abs(lhs.relevance - rhs.relevance) < 1e-6) ? (lhs.rating > rhs.rating) : (lhs.relevance > rhs.relevance);
-        });
+                return (abs(lhs.relevance - rhs.relevance) < 1e-6) ? (lhs.rating > rhs.rating) : (lhs.relevance > rhs.relevance);
+            });
 
         if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
             matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
@@ -324,7 +324,7 @@ void AssertEqualImpl(const T& t, const U& u, const string& t_str, const string& 
 
 void AssertEqualImpl(const double t, const double u, const string& t_str, const string& u_str, const string& file,
     const string& func, unsigned line, const string& hint) {
-    if ( abs(t-u) > 1e-6) {
+    if (abs(t - u) > 1e-6) {
         cout << boolalpha;
         cout << file << "("s << line << "): "s << func << ": "s;
         cout << "ASSERT_EQUAL("s << t_str << ", "s << u_str << ") failed: "s;
@@ -390,15 +390,10 @@ void TestAddDocument() {                 // Тест функции AddDocument
     SearchServer server;
     const int doc_id = 42;
     server.AddDocument(doc_id, "cat in the city"s, DocumentStatus::ACTUAL, { 1, 2, 3 });
-    const string word1 = "cat"s;
-    const string word2 = "in"s;
-    const string word3 = "the"s;
-    const string word4 = "city"s;
-
-    const auto found_docs1 = server.FindTopDocuments(word1);
-    const auto found_docs2 = server.FindTopDocuments(word2);
-    const auto found_docs3 = server.FindTopDocuments(word3);
-    const auto found_docs4 = server.FindTopDocuments(word4);
+    const auto found_docs1 = server.FindTopDocuments("cat"s);
+    const auto found_docs2 = server.FindTopDocuments("in"s);
+    const auto found_docs3 = server.FindTopDocuments("the"s);
+    const auto found_docs4 = server.FindTopDocuments("city"s);
 
     ASSERT_EQUAL(found_docs1.size(), 1u);
     ASSERT_EQUAL(found_docs1[0].id, doc_id);
@@ -410,66 +405,69 @@ void TestAddDocument() {                 // Тест функции AddDocument
     ASSERT_EQUAL(found_docs4[0].id, doc_id);
 }
 
-void TestExcludedMinusWordsWithOneDocument(const string& query, const SearchServer& server,const int doc_id,const bool empty = false) {
+void TestExcludedMinusWordsWithOneDocument(const string& query) {
+    SearchServer server;
+    server.AddDocument(42, "cat in cool city"s, DocumentStatus::ACTUAL, { 1});
+
     const auto found_docs = server.FindTopDocuments(query);
 
-    if (!empty) {
-        ASSERT_EQUAL(found_docs.size(), 1u);
-        ASSERT_EQUAL(found_docs[0].id, doc_id);
-    }
-    else {
-        ASSERT_HINT(found_docs.empty(), "found_docs must be empty!"s);
-    }
+    ASSERT_EQUAL(found_docs.size(), 1u);
+    ASSERT_EQUAL(found_docs[0].id, 42);
 }
+
+void TestExcludedMinusWordsWithOneDocument_ResultEmpty() {
+    SearchServer server;
+    server.AddDocument(42, "cat in cool city"s, DocumentStatus::ACTUAL, { 1});
+
+    const auto found_docs = server.FindTopDocuments("cat -city"s);
+
+    ASSERT_HINT(found_docs.empty(), "found_docs must be empty!"s);
+}
+
+
 
 void TestExcludedMinusWordsFromDocument() {
     const int doc_id = 42, doc_id1 = 104;
-    const string content = "cat in cool city"s;
-    const string content1 = "dog in perfect world"s;
-    const vector<int> ratings = { 1, 2, 3 };
+
+    const vector<int> ratings = { 1 };
 
     SearchServer server;
-    server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
-    TestExcludedMinusWordsWithOneDocument("cat"s, server, doc_id);
-    TestExcludedMinusWordsWithOneDocument("cat -dog"s, server, doc_id);
-    TestExcludedMinusWordsWithOneDocument("cat -city"s, server, doc_id,1);
+    server.AddDocument(doc_id, "cat in cool city"s, DocumentStatus::ACTUAL, ratings);
+    server.AddDocument(doc_id1, "dog in perfect world"s, DocumentStatus::ACTUAL, ratings);
 
-    {// проверка c 2 документа
-        server.AddDocument(doc_id1, content1, DocumentStatus::ACTUAL, ratings);
-        {
-            const auto found_docs = server.FindTopDocuments("in"s);
+    {
+        const auto found_docs = server.FindTopDocuments("in"s);
 
-            ASSERT_EQUAL(found_docs.size(), 2u);
-            ASSERT_EQUAL(found_docs[0].id, doc_id);
-            ASSERT_EQUAL(found_docs[1].id, doc_id1);
-        }
+        ASSERT_EQUAL(found_docs.size(), 2u);
+        ASSERT_EQUAL(found_docs[0].id, doc_id);
+        ASSERT_EQUAL(found_docs[1].id, doc_id1);
+    }
 
-        {
-            const auto found_docs = server.FindTopDocuments("in -world"s);
+    {
+        const auto found_docs = server.FindTopDocuments("in -world"s);
 
-            ASSERT_EQUAL(found_docs.size(), 1u);
-            ASSERT_EQUAL(found_docs[0].id, doc_id);
-        }
+        ASSERT_EQUAL(found_docs.size(), 1u);
+        ASSERT_EQUAL(found_docs[0].id, doc_id);
+    }
 
-        {
-            const auto found_docs = server.FindTopDocuments("in -city"s);
+    {
+        const auto found_docs = server.FindTopDocuments("in -city"s);
 
-            ASSERT_EQUAL(found_docs.size(), 1u);
-            ASSERT_EQUAL(found_docs[0].id, doc_id1);
-        }
+        ASSERT_EQUAL(found_docs.size(), 1u);
+        ASSERT_EQUAL(found_docs[0].id, doc_id1);
+    }
 
-        {
-            const auto found_docs = server.FindTopDocuments("in -in"s);
+    {
+        const auto found_docs = server.FindTopDocuments("in -in"s);
 
-            ASSERT_HINT(found_docs.empty(), "found_docs must be empty!"s);
-        }
+        ASSERT_HINT(found_docs.empty(), "found_docs must be empty!"s);
     }
 }
 
 void TestMatchDocument() {
     const int doc_id = 42;
     SearchServer server;
-    server.AddDocument(doc_id, "cat in cool city"s, DocumentStatus::ACTUAL, { 1, 2, 3 });
+    server.AddDocument(doc_id, "cat in cool city"s, DocumentStatus::ACTUAL, { 1 });
     const string word1 = "cat"s;
     const string word2 = "in"s;
     const string word3 = "cool"s;
@@ -574,7 +572,7 @@ void TestCalculateRating() {
     auto found_docs = server.FindTopDocuments("cat"s);
     sort(found_docs.begin(), found_docs.end(), [](const Document& lhs, const Document& rhs) {
         return lhs.id < rhs.id;
-    });
+        });
 
     ASSERT_EQUAL(found_docs.size(), 4u);
     ASSERT_EQUAL(found_docs[0].rating, arithmetic_mean_document_1);
@@ -583,113 +581,60 @@ void TestCalculateRating() {
     ASSERT_EQUAL(found_docs[3].rating, arithmetic_mean_document_4);
 }
 
-void TestFindTopWithPredicat(const string& chek) {                                       // не придумал аргумента лучше, так как для лямбда функций(как аргумент)
-    if (chek == "status"s) {                                                             // надо писать шаблон, не думаю, что это хорошая идея в тесте
-        const int doc_id = 42;
-        const int doc_id1 = 104;
-        const int doc_id2 = 950;
-        const int doc_id3 = 272;
-        const string content = "cat in cool city"s;
-        const vector<int> ratings = { 1, 2, 3 };
+void TestFindTopWithStatus(DocumentStatus status, int etalonId)
+{
+    const int doc_id = 42;
+    const int doc_id1 = 104;
+    const int doc_id2 = 950;
+    const int doc_id3 = 272;
+    const string content = "cat in cool city"s;
+    const vector ratings = { 1 };
+    SearchServer server;
+    server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+    server.AddDocument(doc_id1, content, DocumentStatus::REMOVED, ratings);
+    server.AddDocument(doc_id2, content, DocumentStatus::BANNED, ratings);
+    server.AddDocument(doc_id3, content, DocumentStatus::IRRELEVANT, ratings);
 
-        SearchServer server;
-        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
-        server.AddDocument(doc_id1, content, DocumentStatus::REMOVED, ratings);
-        server.AddDocument(doc_id2, content, DocumentStatus::BANNED, ratings);
-        server.AddDocument(doc_id3, content, DocumentStatus::IRRELEVANT, ratings);
+    const auto found_docs = server.FindTopDocuments("cat"s, status);
 
-
-        {
-            const auto found_docs = server.FindTopDocuments("cat"s, DocumentStatus::BANNED);
-
-            ASSERT_EQUAL(found_docs.size(), 1u);
-            ASSERT_EQUAL(found_docs[0].id, doc_id2);
-        }
-
-        {
-            const auto found_docs = server.FindTopDocuments("cat"s, DocumentStatus::REMOVED);
-
-            ASSERT_EQUAL(found_docs.size(), 1u);
-            ASSERT_EQUAL(found_docs[0].id, doc_id1);
-        }
-
-        {
-            const auto found_docs = server.FindTopDocuments("cat"s, DocumentStatus::ACTUAL);
-
-            ASSERT_EQUAL(found_docs.size(), 1u);
-            ASSERT_EQUAL(found_docs[0].id, doc_id);
-        }
-
-        {
-            const auto found_docs = server.FindTopDocuments("cat"s, DocumentStatus::IRRELEVANT);
-
-            ASSERT_EQUAL(found_docs.size(), 1u);
-            ASSERT_EQUAL(found_docs[0].id, doc_id3);
-        }
-    }
-    else if (chek == "predicat"s) {
-        const int doc_id1 = 42;
-        const string content = "cat in cool city"s;
-
-        SearchServer server;
-
-        {// проверка 0 документа
-            const auto found_docs = server.FindTopDocuments("cat dog"s, [](int id, DocumentStatus status, int rating) {return rating > 5; });
-
-            ASSERT(found_docs.empty());
-        }
-
-        {// проверка 0 документа
-            const auto found_docs = server.FindTopDocuments(""s, [](int id, DocumentStatus status, int rating) {return rating > 5; });
-
-            ASSERT(found_docs.empty());
-        }
-        server.AddDocument(doc_id1, content, DocumentStatus::ACTUAL, { 1, 2, 3 });
-
-        {// проверка 1 документа
-            const auto found_docs = server.FindTopDocuments("cat dog"s, [](int id, DocumentStatus status, int rating) {return rating > 5; });
-
-            ASSERT(found_docs.empty());
-        }
-
-        {// проверка 1 документа
-            const auto found_docs = server.FindTopDocuments("cat dog"s, [](int id, DocumentStatus status, int rating) {return rating <= 5; });
-
-            ASSERT_EQUAL(found_docs.size(), 1u);
-            ASSERT_EQUAL(found_docs[0].id, doc_id1);
-        }
-
-        {// проверка 1 документа
-            const auto found_docs = server.FindTopDocuments("cat dog"s, [](int id, DocumentStatus status, int rating) {return status != DocumentStatus::ACTUAL; });
-
-            ASSERT(found_docs.empty());
-        }
-
-        {// проверка 1 документа
-            const auto found_docs = server.FindTopDocuments("cat dog"s, [](int id, DocumentStatus status, int rating) {return status == DocumentStatus::ACTUAL; });
-
-            ASSERT_EQUAL(found_docs.size(), 1u);
-            ASSERT_EQUAL(found_docs[0].id, doc_id1);
-        }
-
-        {// проверка 1 документа
-            const auto found_docs = server.FindTopDocuments("cat dog"s, [doc_id1](int id, DocumentStatus status, int rating) {return id != doc_id1; });
-
-            ASSERT(found_docs.empty());
-        }
-
-        {// проверка 1 документа
-            const auto found_docs = server.FindTopDocuments("cat dog"s, [doc_id1](int id, DocumentStatus status, int rating) {return id == doc_id1;  });
-
-            ASSERT_EQUAL(found_docs.size(), 1u);
-            ASSERT_EQUAL(found_docs[0].id, doc_id1);
-        }
-    }
+    ASSERT_EQUAL(found_docs.size(), 1u);
+    ASSERT_EQUAL(found_docs[0].id, etalonId);
 }
 
+template<typename Func>
+void TestFindTopWithPredicatAndEmptySearchServer_ResultEmpty(Func predicate,const string& query)
+{
+    SearchServer server;
 
+    const auto found_docs = server.FindTopDocuments("cat dog"s, predicate);
 
+    ASSERT(found_docs.empty());
+}
 
+template<typename Func>
+void TestFindTopWithPredicat_ResultEmpty(Func predicate)
+{
+    const int doc_id1 = 42;
+    SearchServer server;
+    server.AddDocument(doc_id1, "cat in cool city"s, DocumentStatus::ACTUAL, { 1 });
+
+    const auto found_docs = server.FindTopDocuments("cat dog"s, predicate);
+
+    ASSERT(found_docs.empty());
+}
+
+template<typename Func>
+void TestFindTopWithPredicat(Func predicate)
+{
+    const int doc_id1 = 42;
+    SearchServer server;
+    server.AddDocument(doc_id1, "cat in cool city"s, DocumentStatus::ACTUAL, { 1 });
+
+    const auto found_docs = server.FindTopDocuments("cat dog"s, predicate);
+
+    ASSERT_EQUAL(found_docs.size(), 1u);
+    ASSERT_EQUAL(found_docs[0].id, doc_id1);
+}
 
 void TestRelevanceCalculation() {
     SearchServer server;
@@ -703,8 +648,8 @@ void TestRelevanceCalculation() {
         auto foundDocs = server.FindTopDocuments("cat"s);
         std::sort(foundDocs.begin(), foundDocs.end(),
             [](const Document& lhs, const Document& rhs) {
-            return lhs.id < rhs.id;
-        });
+                return lhs.id < rhs.id;
+            });
 
         ASSERT_EQUAL(foundDocs.size(), 2u);
         ASSERT_EQUAL(foundDocs[0].relevance, relevance_doc_1_and_2);  // частный случай метода, когда входные данные типа double
@@ -723,12 +668,25 @@ void TestRelevanceCalculation() {
 void TestSearchServer() {
     RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);
     RUN_TEST(TestAddDocument);
+    RUN_TEST(TestExcludedMinusWordsWithOneDocument_ResultEmpty);
+    RUN_TEST_WITH_ARG(TestExcludedMinusWordsWithOneDocument("cat"s));
+    RUN_TEST_WITH_ARG(TestExcludedMinusWordsWithOneDocument("cat -dog"s));
     RUN_TEST(TestExcludedMinusWordsFromDocument);
     RUN_TEST(TestMatchDocument);
     RUN_TEST(TestFindTopDocumentsSortByRelevance);
     RUN_TEST(TestCalculateRating);
-    RUN_TEST_WITH_ARG(TestFindTopWithPredicat("status"s));
-    RUN_TEST_WITH_ARG(TestFindTopWithPredicat("predicat"s));
+    RUN_TEST_WITH_ARG(TestFindTopWithStatus(DocumentStatus::ACTUAL, 42));
+    RUN_TEST_WITH_ARG(TestFindTopWithStatus(DocumentStatus::BANNED, 950));
+    RUN_TEST_WITH_ARG(TestFindTopWithStatus(DocumentStatus::IRRELEVANT, 272));
+    RUN_TEST_WITH_ARG(TestFindTopWithStatus(DocumentStatus::REMOVED, 104));
+    RUN_TEST_WITH_ARG(TestFindTopWithPredicatAndEmptySearchServer_ResultEmpty( [](int id, DocumentStatus status, int rating) {return rating > 5; },"cat dog"s ));
+    RUN_TEST_WITH_ARG(TestFindTopWithPredicatAndEmptySearchServer_ResultEmpty( [](int id, DocumentStatus status, int rating) {return rating > 5; }, ""s));
+    RUN_TEST_WITH_ARG(TestFindTopWithPredicat_ResultEmpty([](int id, DocumentStatus status, int rating) {return rating > 5; }));
+    RUN_TEST_WITH_ARG(TestFindTopWithPredicat_ResultEmpty([](int id, DocumentStatus status, int rating) {return status != DocumentStatus::ACTUAL; }));
+    RUN_TEST_WITH_ARG(TestFindTopWithPredicat_ResultEmpty([](int id, DocumentStatus status, int rating) {return id != 42; }));
+    RUN_TEST_WITH_ARG(TestFindTopWithPredicat([](int id, DocumentStatus status, int rating) {return rating <= 5; }));
+    RUN_TEST_WITH_ARG(TestFindTopWithPredicat([](int id, DocumentStatus status, int rating) {return status == DocumentStatus::ACTUAL; }));
+    RUN_TEST_WITH_ARG(TestFindTopWithPredicat([](int id, DocumentStatus status, int rating) {return id == 42;  }));
     RUN_TEST(TestRelevanceCalculation);
 }
 
