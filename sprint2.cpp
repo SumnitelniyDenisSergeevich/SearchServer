@@ -33,7 +33,7 @@ vector<string> SplitIntoWords(const string& text) {
         if (c != ' ') {
             word += c;
         }
-        else if(!word.empty()){
+        else if (!word.empty()) {
             words.push_back(word);
             word.clear();
         }
@@ -56,30 +56,30 @@ struct Document {
     int id;
     double relevance;
     int rating;
-    
-    Document() :id(0),relevance(0.0),rating(0)
+
+    Document() :id(0), relevance(0.0), rating(0)
     {
     }
-    Document(const int d_id,const double d_relevance, const int d_rating) :id(d_id),relevance(d_relevance),rating(d_rating)
+    Document(const int d_id, const double d_relevance, const int d_rating) :id(d_id), relevance(d_relevance), rating(d_rating)
     {
     }
 };
 
 class SearchServer {
 public:
-    
+
     SearchServer(const string& stop_words)
-    {        
+    {
         SetStopWords(stop_words);
-    }        
+    }
     SearchServer(const vector<string>& stop_words)
-    {        
+    {
         SetStopWords(stop_words);
-    }  
-    SearchServer(const set<string>& stop_words)  
-    {        
+    }
+    SearchServer(const set<string>& stop_words)
+    {
         SetStopWords(stop_words);
-    }  
+    }
 
     void AddDocument(int document_id, const string& document, const DocumentStatus& status, const vector<int>& ratings) {
         const vector<string> words = SplitIntoWordsNoStop(document);
@@ -101,8 +101,8 @@ public:
 
         sort(execution::par, matched_documents.begin(), matched_documents.end(),
             [](const Document& lhs, const Document& rhs) {
-            return (abs(lhs.relevance - rhs.relevance) < 1e-6) ? (lhs.rating > rhs.rating) : (lhs.relevance > rhs.relevance);
-        });
+                return (abs(lhs.relevance - rhs.relevance) < 1e-6) ? (lhs.rating > rhs.rating) : (lhs.relevance > rhs.relevance);
+            });
 
         if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
             matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
@@ -173,18 +173,18 @@ private:
     template<typename T>                     // для vector и set
     void SetStopWords(const T& container) {
         for (const string& word : container) {
-            if(word != ""s){
+            if (word != ""s) {
                 stop_words_.insert(word);
             }
         }
-    }  
-    
+    }
+
     void SetStopWords(const string& text) {                // для string
         for (const string& word : SplitIntoWords(text)) {
             stop_words_.insert(word);
         }
-    }  
-    
+    }
+
     static int ComputeAverageRating(const vector<int>& ratings) {
         int rating_sum = 0;
         for (const int rating : ratings) {
@@ -399,7 +399,7 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
     const string content = "cat in the city"s;
     const vector<int> ratings = { 1, 2, 3 };
     {
-        SearchServer server;
+        SearchServer server(""s);
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         const auto found_docs = server.FindTopDocuments("in"s);
 
@@ -408,8 +408,7 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
     }
 
     {
-        SearchServer server;
-        server.SetStopWords("in the"s);
+        SearchServer server("in the"s);
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
 
         ASSERT_HINT(server.FindTopDocuments("in"s).empty(), "Stop words must be excluded from documents"s);
@@ -417,7 +416,7 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
 }
 
 void TestAddDocument() {                 // Тест функции AddDocument
-    SearchServer server;
+    SearchServer server(""s);
     const int doc_id = 42;
     server.AddDocument(doc_id, "cat in the city"s, DocumentStatus::ACTUAL, { 1, 2, 3 });
     const auto found_docs1 = server.FindTopDocuments("cat"s);
@@ -436,7 +435,7 @@ void TestAddDocument() {                 // Тест функции AddDocument
 }
 
 void TestExcludedMinusWordsWithOneDocument(const string& query) {
-    SearchServer server;
+    SearchServer server(""s);
     server.AddDocument(42, "cat in cool city"s, DocumentStatus::ACTUAL, { 1 });
 
     const auto found_docs = server.FindTopDocuments(query);
@@ -446,7 +445,7 @@ void TestExcludedMinusWordsWithOneDocument(const string& query) {
 }
 
 void TestExcludedMinusWordsWithOneDocument_ResultEmpty() {
-    SearchServer server;
+    SearchServer server(""s);
     server.AddDocument(42, "cat in cool city"s, DocumentStatus::ACTUAL, { 1 });
 
     const auto found_docs = server.FindTopDocuments("cat -city"s);
@@ -455,7 +454,7 @@ void TestExcludedMinusWordsWithOneDocument_ResultEmpty() {
 }
 
 void TestExcludedMinusWordsFromDocument_Empty() {
-    SearchServer server;
+    SearchServer server(""s);
     server.AddDocument(42, "cat in cool city"s, DocumentStatus::ACTUAL, { 1 });
     server.AddDocument(104, "dog in perfect world"s, DocumentStatus::ACTUAL, { 1 });
 
@@ -465,7 +464,7 @@ void TestExcludedMinusWordsFromDocument_Empty() {
 }
 
 void TestExcludedMinusWordsFromDocument_OneAnswer(const string& query, int etalonID) {
-    SearchServer server;
+    SearchServer server(""s);
     server.AddDocument(42, "cat in cool city"s, DocumentStatus::ACTUAL, { 1 });
     server.AddDocument(104, "dog in perfect world"s, DocumentStatus::ACTUAL, { 1 });
 
@@ -477,7 +476,7 @@ void TestExcludedMinusWordsFromDocument_OneAnswer(const string& query, int etalo
 
 void TestExcludedMinusWordsFromDocument_TwoAnswer() {
     const int doc_id = 42, doc_id1 = 104;
-    SearchServer server;
+    SearchServer server(""s);
     server.AddDocument(doc_id, "cat in cool city"s, DocumentStatus::ACTUAL, { 1 });
     server.AddDocument(doc_id1, "dog in perfect world"s, DocumentStatus::ACTUAL, { 1 });
 
@@ -490,7 +489,7 @@ void TestExcludedMinusWordsFromDocument_TwoAnswer() {
 
 void TestMatchDocument() {
     const int doc_id = 42;
-    SearchServer server;
+    SearchServer server(""s);
     server.AddDocument(doc_id, "cat in cool city"s, DocumentStatus::ACTUAL, { 1 });
     const string word1 = "cat"s;
     const string word2 = "in"s;
@@ -531,7 +530,7 @@ void TestMatchDocument() {
 }
 
 SearchServer creating_a_filled_object(int id, int id1, int id2, int id3, int id4) {
-    SearchServer server;
+    SearchServer server(""s);
     server.AddDocument(id, "cat in cool city"s, DocumentStatus::ACTUAL, { 1 });
     server.AddDocument(id1, "dog in cool world"s, DocumentStatus::ACTUAL, { 1 });
     server.AddDocument(id2, "throw duck in a river"s, DocumentStatus::ACTUAL, { 1 });
@@ -588,7 +587,7 @@ void TestCalculateRating() {
     const int arithmetic_mean_document_2 = 5;
     const int arithmetic_mean_document_3 = -3;
     const int arithmetic_mean_document_4 = 1;
-    SearchServer server;
+    SearchServer server(""s);
     server.AddDocument(1, content, DocumentStatus::ACTUAL, { 1, 2, 3 });
     server.AddDocument(2, content, DocumentStatus::ACTUAL, { 4, 28, -16 });
     server.AddDocument(3, content, DocumentStatus::ACTUAL, { 4, -16, 3 });
@@ -596,7 +595,7 @@ void TestCalculateRating() {
     auto found_docs = server.FindTopDocuments("cat"s);
     sort(found_docs.begin(), found_docs.end(), [](const Document& lhs, const Document& rhs) {
         return lhs.id < rhs.id;
-    });
+        });
 
     ASSERT_EQUAL(found_docs.size(), 4u);
     ASSERT_EQUAL(found_docs[0].rating, arithmetic_mean_document_1);
@@ -613,7 +612,7 @@ void TestFindTopWithStatus(DocumentStatus status, int etalonId)
     const int doc_id3 = 272;
     const string content = "cat in cool city"s;
     const vector ratings = { 1 };
-    SearchServer server;
+    SearchServer server(""s);
     server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
     server.AddDocument(doc_id1, content, DocumentStatus::REMOVED, ratings);
     server.AddDocument(doc_id2, content, DocumentStatus::BANNED, ratings);
@@ -628,7 +627,7 @@ void TestFindTopWithStatus(DocumentStatus status, int etalonId)
 template<typename Func>
 void TestFindTopWithPredicatAndEmptySearchServer_ResultEmpty(Func predicate, const string& query)
 {
-    SearchServer server;
+    SearchServer server(""s);
 
     const auto found_docs = server.FindTopDocuments("cat dog"s, predicate);
 
@@ -639,7 +638,7 @@ template<typename Func>
 void TestFindTopWithPredicat_ResultEmpty(Func predicate)
 {
     const int doc_id1 = 42;
-    SearchServer server;
+    SearchServer server(""s);
     server.AddDocument(doc_id1, "cat in cool city"s, DocumentStatus::ACTUAL, { 1 });
 
     const auto found_docs = server.FindTopDocuments("cat dog"s, predicate);
@@ -651,7 +650,7 @@ template<typename Func>
 void TestFindTopWithPredicat(Func predicate)
 {
     const int doc_id1 = 42;
-    SearchServer server;
+    SearchServer server(""s);
     server.AddDocument(doc_id1, "cat in cool city"s, DocumentStatus::ACTUAL, { 1 });
 
     const auto found_docs = server.FindTopDocuments("cat dog"s, predicate);
@@ -661,7 +660,7 @@ void TestFindTopWithPredicat(Func predicate)
 }
 
 void TestRelevanceCalculation() {
-    SearchServer server;
+    SearchServer server(""s);
     const double relevance_doc_1_and_2 = 0.135155;
     const double relevance_doc_3 = 0.366204;
     server.AddDocument(1, "cat and dog"s, DocumentStatus::ACTUAL, { 1 });
@@ -672,8 +671,8 @@ void TestRelevanceCalculation() {
         auto foundDocs = server.FindTopDocuments("cat"s);
         std::sort(foundDocs.begin(), foundDocs.end(),
             [](const Document& lhs, const Document& rhs) {
-            return lhs.id < rhs.id;
-        });
+                return lhs.id < rhs.id;
+            });
 
         ASSERT_EQUAL(foundDocs.size(), 2u);
         ASSERT_EQUAL(foundDocs[0].relevance, relevance_doc_1_and_2);  // частный случай метода, когда входные данные типа double
@@ -695,8 +694,8 @@ void TestSearchServer() {
     RUN_TEST(TestExcludedMinusWordsWithOneDocument_ResultEmpty);
     RUN_TEST_WITH_ARG(TestExcludedMinusWordsWithOneDocument("cat"s));
     RUN_TEST_WITH_ARG(TestExcludedMinusWordsWithOneDocument("cat -dog"s));
-    RUN_TEST_WITH_ARG(TestExcludedMinusWordsFromDocument_OneAnswer("in -world"s,42));
-    RUN_TEST_WITH_ARG(TestExcludedMinusWordsFromDocument_OneAnswer("in -city"s,104));
+    RUN_TEST_WITH_ARG(TestExcludedMinusWordsFromDocument_OneAnswer("in -world"s, 42));
+    RUN_TEST_WITH_ARG(TestExcludedMinusWordsFromDocument_OneAnswer("in -city"s, 104));
     RUN_TEST(TestExcludedMinusWordsFromDocument_TwoAnswer);
     RUN_TEST(TestExcludedMinusWordsFromDocument_Empty);
     RUN_TEST(TestMatchDocument);
@@ -730,8 +729,7 @@ void PrintDocument(const Document& document) {
 
 int main() {
     TestSearchServer();
-    SearchServer search_server;
-    search_server.SetStopWords("и в на"s);
+    SearchServer search_server("и в на"s);
 
     search_server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
     search_server.AddDocument(1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
