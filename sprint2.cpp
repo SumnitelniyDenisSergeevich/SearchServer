@@ -67,11 +67,19 @@ struct Document {
 
 class SearchServer {
 public:
-    void SetStopWords(const string& text) {
-        for (const string& word : SplitIntoWords(text)) {
-            stop_words_.insert(word);
-        }
-    }
+    
+    SearchServer(const string& stop_words)
+    {        
+        SetStopWords(stop_words);
+    }        
+    SearchServer(const vector<string>& stop_words)
+    {        
+        SetStopWords(stop_words);
+    }  
+    SearchServer(const set<string>& stop_words)  
+    {        
+        SetStopWords(stop_words);
+    }  
 
     void AddDocument(int document_id, const string& document, const DocumentStatus& status, const vector<int>& ratings) {
         const vector<string> words = SplitIntoWordsNoStop(document);
@@ -162,6 +170,21 @@ private:
     map<string, map<int, double>> word_to_document_freqs_;
     map<int, DocumentData> documents_;
 
+    template<typename T>                     // для vector и set
+    void SetStopWords(const T& container) {
+        for (const string& word : container) {
+            if(word != ""s){
+                stop_words_.insert(word);
+            }
+        }
+    }  
+    
+    void SetStopWords(const string& text) {                // для string
+        for (const string& word : SplitIntoWords(text)) {
+            stop_words_.insert(word);
+        }
+    }  
+    
     static int ComputeAverageRating(const vector<int>& ratings) {
         int rating_sum = 0;
         for (const int rating : ratings) {
