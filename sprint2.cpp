@@ -56,6 +56,13 @@ struct Document {
     int id;
     double relevance;
     int rating;
+    
+    Document() :id(0),relevance(0.0),rating(0)
+    {
+    }
+    Document(const int d_id,const double d_relevance, const int d_rating) :id(d_id),relevance(d_relevance),rating(d_rating)
+    {
+    }
 };
 
 class SearchServer {
