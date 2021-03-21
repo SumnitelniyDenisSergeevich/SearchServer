@@ -28,14 +28,14 @@ int ReadLineWithNumber() {
 
 vector<string> SplitIntoWords(const string& text) {
     vector<string> words;
-    string word;
+    string word = ""s;
     for (const char c : text) {
-        if (c == ' ') {
+        if (c != ' ') {
+            word += c;
+        }
+        else if(!word.empty()){
             words.push_back(word);
             word.clear();
-        }
-        else {
-            word += c;
         }
     }
     words.push_back(word);
