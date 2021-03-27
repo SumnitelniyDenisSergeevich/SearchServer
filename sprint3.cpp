@@ -88,7 +88,7 @@ public:
         : stop_words_(MakeUniqueNonEmptyStrings(stop_words)) {
         for (const string& word : stop_words) {
             if (CheckingForSpecialSymbols(word)) {
-                throw invalid_argument("sodergit spec sumbols"s);
+                throw invalid_argument("стоп слова содержат специальные символы с кодом от 0 до 31"s);
             }
         }
     }
@@ -97,13 +97,21 @@ public:
         : SearchServer(SplitIntoWords(stop_words_text))  // Invoke delegating constructor from string container
     {
         if (CheckingForSpecialSymbols(stop_words_text)) {
-            throw invalid_argument("sodergit spec sumbols"s);
+            throw invalid_argument("стоп слова содержат специальные символы с кодом от 0 до 31"s);
         }
     }
 
     void AddDocument(int document_id, const string& document, const DocumentStatus& status, const vector<int>& ratings) {
-        if (document_id < 0 || documents_.count(document_id) || CheckingForSpecialSymbols(document)) {
-            throw invalid_argument("something"s);
+        if (document_id < 0 ) {
+            throw invalid_argument("id документа должен быть >= 0!"s);
+        }
+
+        if (documents_.count(document_id)) {
+            throw invalid_argument("документ с таким id уже существует!"s);
+        }
+
+        if (CheckingForSpecialSymbols(document)) {
+            throw invalid_argument("документ содержит специальные символы с кодом от 0 до 31"s);
         }
 
         const vector<string> words = SplitIntoWordsNoStop(document);
@@ -121,22 +129,26 @@ public:
 
     template<typename DocumentsFilter>
     vector<Document> FindTopDocuments(const string& raw_query, DocumentsFilter document_filter) const {
-        if (CheckingForSpecialSymbols(raw_query) || CheckingForEmptyMinusWord(raw_query)) {
-            throw invalid_argument("something"s);
+        if (CheckingForSpecialSymbols(raw_query)) {
+            throw invalid_argument("поисковый запрос содержит специальные символы с кодом от 0 до 31"s);
+        }
+
+        if (CheckingForEmptyMinusWord(raw_query)) {
+            throw invalid_argument("в документе присутствует пустое минус слово"s);
         }
 
         const Query query = ParseQuery(raw_query);
 
         if (CheckingForDoubleMinus(query.minus_words)) {
-            throw invalid_argument("something"s);
+            throw invalid_argument("в документе присутствует слово с 2 минусами в начале"s);
         }
 
         auto matched_documents = FindAllDocuments(query, document_filter);
 
         sort(execution::par, matched_documents.begin(), matched_documents.end(),
             [](const Document& lhs, const Document& rhs) {
-            return (abs(lhs.relevance - rhs.relevance) < 1e-6) ? (lhs.rating > rhs.rating) : (lhs.relevance > rhs.relevance);
-        });
+                return (abs(lhs.relevance - rhs.relevance) < 1e-6) ? (lhs.rating > rhs.rating) : (lhs.relevance > rhs.relevance);
+            });
 
         if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
             matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
@@ -161,14 +173,18 @@ public:
     }
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
-        if (CheckingForSpecialSymbols(raw_query) || CheckingForEmptyMinusWord(raw_query)) {
-            throw invalid_argument("something"s);
+        if (CheckingForSpecialSymbols(raw_query)) {
+            throw invalid_argument("поисковый запрос содержит специальные символы с кодом от 0 до 31"s);
+        }
+
+        if (CheckingForEmptyMinusWord(raw_query)) {
+            throw invalid_argument("в документе присутствует пустое минус слово"s);
         }
 
         const Query query = ParseQuery(raw_query);
 
         if (CheckingForDoubleMinus(query.minus_words)) {
-            throw invalid_argument("something"s);
+            throw invalid_argument("в документе присутствует слово с 2 минусами в начале"s);
         }
 
         vector<string> matched_words;
@@ -196,7 +212,7 @@ public:
         if (index >= 0 && index < GetDocumentCount()) {
             return document_ids_[index];
         }
-        throw out_of_range("probleva"s);
+        throw out_of_range("введён несуществующий индекс документа"s);
     }
 
 private:
@@ -371,7 +387,7 @@ private:
 
 
 };
-                                          // tests
+// tests
 
 template <typename Type>
 ostream& operator<<(ostream& out, const vector<Type> V) {
@@ -675,9 +691,9 @@ void TestCalculateRating() {
     server.AddDocument(3, content, DocumentStatus::ACTUAL, { 4, -16, 3 });
     server.AddDocument(4, content, DocumentStatus::ACTUAL, { 1, 3, 1 });
     auto found_docs = server.FindTopDocuments("cat"s);
-    sort(found_docs.begin(), found_docs.end(), [](const Document& lhs, const Document& rhs) {
+    sort(execution::par, found_docs.begin(), found_docs.end(), [](const Document& lhs, const Document& rhs) {
         return lhs.id < rhs.id;
-    });
+        });
 
     ASSERT_EQUAL(found_docs.size(), 4u);
     ASSERT_EQUAL(found_docs[0].rating, arithmetic_mean_document_1);
@@ -751,10 +767,10 @@ void TestRelevanceCalculation() {
 
     {
         auto foundDocs = server.FindTopDocuments("cat"s);
-        std::sort(foundDocs.begin(), foundDocs.end(),
+        std::sort(execution::par, foundDocs.begin(), foundDocs.end(),
             [](const Document& lhs, const Document& rhs) {
-            return lhs.id < rhs.id;
-        });
+                return lhs.id < rhs.id;
+            });
 
         ASSERT_EQUAL(foundDocs.size(), 2u);
         ASSERT_EQUAL(foundDocs[0].relevance, relevance_doc_1_and_2);  // частный случай метода, когда входные данные типа double
@@ -824,7 +840,7 @@ void AddDocument(SearchServer& search_server, int document_id, const string& doc
     try {
         search_server.AddDocument(document_id, document, status, ratings);
     }
-    catch (const exception & e) {
+    catch (const exception& e) {
         cout << "Ошибка добавления документа "s << document_id << ": "s << e.what() << endl;
     }
 }
@@ -836,7 +852,7 @@ void FindTopDocuments(const SearchServer& search_server, const string& raw_query
             PrintDocument(document);
         }
     }
-    catch (const exception & e) {
+    catch (const exception& e) {
         cout << "Ошибка поиска: "s << e.what() << endl;
     }
 }
@@ -851,12 +867,13 @@ void MatchDocuments(const SearchServer& search_server, const string& query) {
             PrintMatchDocumentResult(document_id, words, status);
         }
     }
-    catch (const exception & e) {
+    catch (const exception& e) {
         cout << "Ошибка матчинга документов на запрос "s << query << ": "s << e.what() << endl;
     }
 }
 
 int main() {
+    TestSearchServer();
     setlocale(LC_ALL, "Russian");
     SearchServer search_server("и в на"s);
 
