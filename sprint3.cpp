@@ -68,7 +68,7 @@ struct Document {
 
 
 template <typename StringContainer>
-set<string> MakeUniqueNonEmptyStrings(const StringContainer& strings) {
+[[nodiscard]] set<string> MakeUniqueNonEmptyStrings(const StringContainer& strings) {
     set<string> non_empty_strings;
     for (const string& str : strings) {
         if (!str.empty()) {
@@ -102,7 +102,7 @@ public:
     }
 
     void AddDocument(int document_id, const string& document, const DocumentStatus& status, const vector<int>& ratings) {
-        if (document_id < 0 ) {
+        if (document_id < 0) {
             throw invalid_argument("id документа должен быть >= 0!"s);
         }
 
@@ -128,7 +128,7 @@ public:
     }
 
     template<typename DocumentsFilter>
-    vector<Document> FindTopDocuments(const string& raw_query, DocumentsFilter document_filter) const {
+    [[nodiscard]] vector<Document> FindTopDocuments(const string& raw_query, DocumentsFilter document_filter) const {
         if (CheckingForSpecialSymbols(raw_query)) {
             throw invalid_argument("поисковый запрос содержит специальные символы с кодом от 0 до 31"s);
         }
@@ -158,12 +158,12 @@ public:
         return matched_documents;
     }
 
-    vector<Document> FindTopDocuments(const string& raw_query) const {
+    [[nodiscard]] vector<Document> FindTopDocuments(const string& raw_query) const {
         return FindTopDocuments(raw_query, [](int document_id, DocumentStatus status, int rating) { return status == DocumentStatus::ACTUAL; });
     }
 
 
-    vector<Document> FindTopDocuments(const string& raw_query, const DocumentStatus& status) const {
+    [[nodiscard]] vector<Document> FindTopDocuments(const string& raw_query, const DocumentStatus& status) const {
         return FindTopDocuments(raw_query, [&status](int document_id, DocumentStatus status1, int rating) { return status1 == status; });
     }
 
@@ -172,7 +172,7 @@ public:
         return documents_.size();
     }
 
-    tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
+    [[nodiscard]] tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
         if (CheckingForSpecialSymbols(raw_query)) {
             throw invalid_argument("поисковый запрос содержит специальные символы с кодом от 0 до 31"s);
         }
@@ -238,7 +238,7 @@ private:
     vector<int> document_ids_;
 
 
-    bool CheckingForEmptyMinusWord(const string& s) const {
+    [[nodiscard]] bool CheckingForEmptyMinusWord(const string& s) const {
         for (int i = 0; i < s.size(); ++i) {
             if ((s[i] == '-') && (i == (s.size() - 1))) {
                 return true;
@@ -250,7 +250,7 @@ private:
         return false;
     }
 
-    bool CheckingForDoubleMinus(const set<string>& words) const {
+    [[nodiscard]] bool CheckingForDoubleMinus(const set<string>& words) const {
         for (const string& word : words) {
             if (word[0] == '-') {
                 return true;
@@ -259,7 +259,7 @@ private:
         return false;
     }
 
-    bool CheckingForSpecialSymbols(const string& s) const {
+    [[nodiscard]] bool CheckingForSpecialSymbols(const string& s) const {
         for (const char c : s) {
             if (c >= 0 && c <= 31)
                 return true;
@@ -290,19 +290,19 @@ private:
         return rating_sum / static_cast<int>(ratings.size());
     }
 
-    bool IsContainWord(const string& word) const {
+    [[nodiscard]] bool IsContainWord(const string& word) const {
         return word_to_document_freqs_.count(word);
     }
 
-    bool IsWordContainId(const string& word, const int doc_id) const {
+    [[nodiscard]] bool IsWordContainId(const string& word, const int doc_id) const {
         return word_to_document_freqs_.at(word).count(doc_id);
     }
 
-    bool IsStopWord(const string& word) const {
+    [[nodiscard]] bool IsStopWord(const string& word) const {
         return stop_words_.count(word) > 0;
     }
 
-    vector<string> SplitIntoWordsNoStop(const string& text) const {
+    [[nodiscard]] vector<string> SplitIntoWordsNoStop(const string& text) const {
         vector<string> words;
         for (const string& word : SplitIntoWords(text)) {
             if (!IsStopWord(word)) {
@@ -345,12 +345,12 @@ private:
     }
 
     // Existence required
-    double ComputeWordInverseDocumentFreq(const string& word) const {
+    [[nodiscard]] double ComputeWordInverseDocumentFreq(const string& word) const {
         return log(GetDocumentCount() * 1.0 / word_to_document_freqs_.at(word).size());
     }
 
     template <typename Pred>
-    vector<Document> FindAllDocuments(const Query& query, Pred pred) const {
+    [[nodiscard]] vector<Document> FindAllDocuments(const Query& query, Pred pred) const {
         map<int, double> document_to_relevance;
         for (const string& word : query.plus_words) {
             if (word_to_document_freqs_.count(word) == 0) {
