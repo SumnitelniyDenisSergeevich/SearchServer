@@ -84,21 +84,19 @@ public:
     inline static constexpr int INVALID_DOCUMENT_ID = -1;
 
     template <typename StringContainer>
-    explicit SearchServer(const StringContainer& stop_words)
-        : stop_words_(MakeUniqueNonEmptyStrings(stop_words)) {
+    explicit SearchServer(const StringContainer& stop_words) {
         for (const string& word : stop_words) {
             if (CheckingForSpecialSymbols(word)) {
                 throw invalid_argument("стоп слова содержат специальные символы с кодом от 0 до 31"s);
             }
         }
+
+        stop_words_ = MakeUniqueNonEmptyStrings(stop_words);
     }
 
     explicit SearchServer(const string& stop_words_text)
         : SearchServer(SplitIntoWords(stop_words_text))  // Invoke delegating constructor from string container
     {
-        if (CheckingForSpecialSymbols(stop_words_text)) {
-            throw invalid_argument("стоп слова содержат специальные символы с кодом от 0 до 31"s);
-        }
     }
 
     void AddDocument(int document_id, const string& document, const DocumentStatus& status, const vector<int>& ratings) {
@@ -129,19 +127,9 @@ public:
 
     template<typename DocumentsFilter>
     [[nodiscard]] vector<Document> FindTopDocuments(const string& raw_query, DocumentsFilter document_filter) const {
-        if (CheckingForSpecialSymbols(raw_query)) {
-            throw invalid_argument("поисковый запрос содержит специальные символы с кодом от 0 до 31"s);
-        }
-
-        if (CheckingForEmptyMinusWord(raw_query)) {
-            throw invalid_argument("в документе присутствует пустое минус слово"s);
-        }
+        ChekingRawQuery(raw_query);
 
         const Query query = ParseQuery(raw_query);
-
-        if (CheckingForDoubleMinus(query.minus_words)) {
-            throw invalid_argument("в документе присутствует слово с 2 минусами в начале"s);
-        }
 
         auto matched_documents = FindAllDocuments(query, document_filter);
 
@@ -173,19 +161,11 @@ public:
     }
 
     [[nodiscard]] tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
-        if (CheckingForSpecialSymbols(raw_query)) {
-            throw invalid_argument("поисковый запрос содержит специальные символы с кодом от 0 до 31"s);
-        }
-
-        if (CheckingForEmptyMinusWord(raw_query)) {
-            throw invalid_argument("в документе присутствует пустое минус слово"s);
-        }
+        ChekingRawQuery(raw_query);
 
         const Query query = ParseQuery(raw_query);
 
-        if (CheckingForDoubleMinus(query.minus_words)) {
-            throw invalid_argument("в документе присутствует слово с 2 минусами в начале"s);
-        }
+        
 
         vector<string> matched_words;
         for (const string& word : query.plus_words) {
@@ -209,10 +189,7 @@ public:
     }
 
     int GetDocumentId(int index) const {
-        if (index >= 0 && index < GetDocumentCount()) {
-            return document_ids_[index];
-        }
-        throw out_of_range("введён несуществующий индекс документа"s);
+        return document_ids_.at(index);
     }
 
 private:
@@ -250,9 +227,9 @@ private:
         return false;
     }
 
-    [[nodiscard]] bool CheckingForDoubleMinus(const set<string>& words) const {
-        for (const string& word : words) {
-            if (word[0] == '-') {
+    [[nodiscard]] bool CheckingForDoubleMinus(const string& text) const {
+        for (int i = 0; i + 1 < text.size() ;++i) {
+            if (text[i] == '-' && text[i+1] == '-') {
                 return true;
             }
         }
@@ -266,6 +243,19 @@ private:
         }
         return false;
     }
+
+    void ChekingRawQuery(const string& raw_query) const {
+        if (CheckingForSpecialSymbols(raw_query)) {
+            throw invalid_argument("поисковый запрос содержит специальные символы с кодом от 0 до 31"s);
+        }
+        if (CheckingForEmptyMinusWord(raw_query)) {
+            throw invalid_argument("в документе присутствует пустое минус слово"s);
+        }
+        if (CheckingForDoubleMinus(raw_query)) {
+            throw invalid_argument("в документе присутствует слово с 2 минусами в начале"s);
+        }
+    }
+
 
     template<typename T>                     // для vector и set
     void SetStopWords(const T& container) {
@@ -840,7 +830,7 @@ void AddDocument(SearchServer& search_server, int document_id, const string& doc
     try {
         search_server.AddDocument(document_id, document, status, ratings);
     }
-    catch (const exception& e) {
+    catch (const invalid_argument& e) {
         cout << "Ошибка добавления документа "s << document_id << ": "s << e.what() << endl;
     }
 }
@@ -852,7 +842,7 @@ void FindTopDocuments(const SearchServer& search_server, const string& raw_query
             PrintDocument(document);
         }
     }
-    catch (const exception& e) {
+    catch (const invalid_argument& e) {
         cout << "Ошибка поиска: "s << e.what() << endl;
     }
 }
@@ -867,8 +857,11 @@ void MatchDocuments(const SearchServer& search_server, const string& query) {
             PrintMatchDocumentResult(document_id, words, status);
         }
     }
-    catch (const exception& e) {
+    catch (const invalid_argument& e) {
         cout << "Ошибка матчинга документов на запрос "s << query << ": "s << e.what() << endl;
+    }
+    catch (const  out_of_range& z) {
+        cout << "Ошибка матчинга документов Введён неверный индекс "s << z.what() << endl;
     }
 }
 
