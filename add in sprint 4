@@ -1,0 +1,78 @@
+ostream& operator<<(ostream& out, const Document& doc) {
+    out << "{ document_id = "s << doc.id << ", relevance = "s << doc.relevance << ", rating = "s << doc.rating << " }"s;
+    return out;
+}
+
+
+
+template<typename Iter>
+class IteratorRange {
+public:
+    IteratorRange(Iter begin, Iter end) : begin_(begin), end_(end) {
+
+    }
+
+    inline auto begin() {
+        return begin_;
+    }
+
+    inline auto end() {
+        return end_;
+    }
+
+    inline auto size() {
+        return distance(begin, end);
+    }
+
+private:
+    Iter begin_;
+    Iter end_;
+};
+
+template<typename Iter>
+ostream& operator<<(ostream& out, IteratorRange<Iter> range) {
+
+    for (auto temp = range.begin(); temp != range.end() ; ++temp) {
+        out << *temp;
+    }
+    return out;
+}
+
+template<typename Iter>
+class Paginator {
+public:
+    Paginator(Iter begin, Iter end, size_t page_size) {
+        
+        for (auto i = begin; distance(i, end) > 0; advance(i, page_size)) {
+            pages_.push_back(IteratorRange<Iter>{i, next(i, distance(i, end) < static_cast<ptrdiff_t>(page_size) ? distance(i, end) : page_size)});
+        }
+
+    }
+
+
+    
+    inline auto begin() const {
+        return pages_.begin();
+    }
+
+    inline auto end() const {
+        return pages_.end();
+    }
+
+    int size() {
+        return distance(pages_.begin(), pages_.end());
+    }
+
+
+private:
+    vector< IteratorRange<Iter> > pages_;
+};
+
+
+
+    
+
+template <typename Container>
+auto Paginate(const Container& c, size_t page_size) {
+    return Paginator(begin(c), end(c), page_size);
+}
