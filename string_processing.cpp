@@ -1,7 +1,5 @@
 #include "string_processing.h"
 
-#include <string>
-#include <vector>
 #include <iostream>
 
 std::string ReadLine() {

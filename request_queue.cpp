@@ -1,12 +1,4 @@
-#include "search_server.h"
 #include "request_queue.h"
-
-#include <string>
-#include <vector>
-
-RequestQueue::RequestQueue(const SearchServer& search_server) : obj(search_server) {
-    // напишите реализацию
-}
 
 std::vector<Document> RequestQueue::AddFindRequest(const std::string& raw_query, DocumentStatus status) {
     return AddFindRequest(raw_query, [status](int document_id, DocumentStatus document_status, int rating) {

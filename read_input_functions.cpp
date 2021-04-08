@@ -1,9 +1,5 @@
 #include "read_input_functions.h"
-#include "search_server.h"
-#include "document.h"
 
-#include <string>
-#include <vector>
 #include <stdexcept>
 
 void AddDocument(SearchServer& search_server, int document_id, const std::string& document, DocumentStatus status,

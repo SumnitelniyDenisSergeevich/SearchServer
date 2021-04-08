@@ -1,19 +1,6 @@
-#include "string_processing.h"
-#include "document.h"
 #include "search_server.h"
 
-#include <vector>
-#include <string>
-#include <stdexcept>
-#include <algorithm>
-#include <set>
 #include <cmath>
-
-SearchServer::SearchServer(const std::string& stop_words_text)
-    : SearchServer(SplitIntoWords(stop_words_text))  // Invoke delegating constructor
-                                                        // from string container
-{
-}
 
 void SearchServer::AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings) {
     if (document_id < 0) {
@@ -48,14 +35,6 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_quer
     return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
 }
 
-int SearchServer::GetDocumentCount() const {
-    return documents_.size();
-}
-
-int SearchServer::GetDocumentId(int index) const {
-    return document_ids_.at(index);
-}
-
 std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query, int document_id) const {
     const auto query = ParseQuery(raw_query);
     std::vector<std::string> matched_words;
@@ -77,10 +56,6 @@ std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument
         }
     }
     return { matched_words, documents_.at(document_id).status };
-}
-
-bool SearchServer::IsStopWord(const std::string& word) const {
-    return stop_words_.count(word) > 0;
 }
 
 bool SearchServer::CheckingForEmptyMinusWord(const std::string& s) const {

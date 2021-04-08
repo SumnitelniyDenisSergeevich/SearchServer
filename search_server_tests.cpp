@@ -1,10 +1,5 @@
 #include "search_server_tests.h"
-#include "search_server.h"
-#include "document.h"
-#include "Tests_Frame.h"
 
-#include <vector>
-#include <string>
 #include <execution>
 
 void AddDocumentTest() {                 // Тест функции AddDocument
