@@ -14,15 +14,15 @@ public:
         , size_(distance(first_, last_)) {
     }
 
-    [[nodiscard]] inline Iterator begin() const noexcept {
+    [[nodiscard]] inline Iterator begin() const {
         return first_;
     }
 
-    [[nodiscard]] inline Iterator end() const noexcept {
+    [[nodiscard]] inline Iterator end() const {
         return last_;
     }
 
-    [[nodiscard]] inline size_t size() const noexcept {
+    [[nodiscard]] inline size_t size() const {
         return size_;
     }
 
