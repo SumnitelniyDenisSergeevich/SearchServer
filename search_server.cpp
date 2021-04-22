@@ -35,6 +35,40 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_quer
     return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
 }
 
+const std::map<std::string, double>& SearchServer::GetWordFrequencies(int document_id) const {
+    static std::map<std::string, double> result;
+    result.clear();
+
+    for (auto [str, id_freq] : word_to_document_freqs_) {
+        auto iter = id_freq.find(document_id);
+        if (iter != id_freq.end()) {
+            result.insert(std::pair(str, iter->second));
+        }
+    }
+
+    return result;
+}
+
+void SearchServer::RemoveDocument(int document_id) {
+    std::vector<std::string> empty_map_words;
+    for (auto& [str, id_freq] : word_to_document_freqs_) {
+        auto iter = id_freq.find(document_id);
+        if (iter != id_freq.end()) {
+            id_freq.erase(iter);
+            if (id_freq.empty()) {
+                empty_map_words.push_back(str);
+            }
+        }
+    }
+
+    for (std::string empty_word : empty_map_words) {
+        word_to_document_freqs_.erase(empty_word);
+    }
+
+    documents_.erase(document_id);
+    document_ids_.erase(std::find(document_ids_.begin(), document_ids_.end(), document_id));
+}
+
 std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query, int document_id) const {
     const auto query = ParseQuery(raw_query);
     std::vector<std::string> matched_words;

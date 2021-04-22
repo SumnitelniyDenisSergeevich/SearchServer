@@ -17,6 +17,10 @@
 // “ест провер€ет, что поискова€ система исключает стоп-слова при добавлении документов
 void AddDocumentTest();
 
+void Test_GetWordFrequencies();
+
+void Test_RemoveDocument();
+
 void Test_ExcludeStopWords_FromAddedDocumentContent();
 
 void Test_ExcludedMinusWords_WithOneDocument_ResultFindDocument(const std::string& query);
@@ -32,8 +36,6 @@ void TestExcludedMinusWords_FromTwoDocuments_ResultTwoDocuments();
 void Test_GetDocumentCount_ResultEmpty();
 
 void Test_GetDocumentCount_ResultThreeDocuments();
-
-void Test_GetDocumentId();
 
 void TestMatchDocument();
 

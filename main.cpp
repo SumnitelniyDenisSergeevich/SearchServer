@@ -2,25 +2,29 @@
 #include "paginator.h"
 #include "read_input_functions.h"
 #include "request_queue.h"
+#include "remove_duplicates.h"
+
+using namespace std::literals;
 
 int main() {
     TestSearchServer();
   
-    SearchServer search_server(std::string{ "and in at" });
-    RequestQueue request_queue(search_server);
-    search_server.AddDocument(1, std::string{ "curly cat curly tail" }, DocumentStatus::ACTUAL, { 7, 2, 7 });
-    search_server.AddDocument(2, std::string{ "curly dog and fancy collar" }, DocumentStatus::ACTUAL, { 1, 2, 3 });
-    search_server.AddDocument(3, std::string{ "big cat fancy collar " }, DocumentStatus::ACTUAL, { 1, 2, 8 });
-    search_server.AddDocument(4, std::string{ "big dog sparrow Eugene" }, DocumentStatus::ACTUAL, { 1, 3, 2 });
-    search_server.AddDocument(5, std::string{ "big dog sparrow Vasiliy" }, DocumentStatus::ACTUAL, { 1, 1, 1 });
+    SearchServer search_server("and with"s);
 
-    for (int i = 0; i < 1439; ++i) {
-        request_queue.AddFindRequest(std::string{ "empty request" });
-    }
-    request_queue.AddFindRequest(std::string{ "curly dog" });
-    request_queue.AddFindRequest(std::string{ "big collar" });
-    request_queue.AddFindRequest(std::string{ "sparrow" });
-    std::cout << std::string{ "Total empty requests: " } << request_queue.GetNoResultRequests() << std::endl;
+    AddDocument(search_server, 1, "funny pet and nasty rat"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
+    AddDocument(search_server, 2, "funny pet with curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+    AddDocument(search_server, 3, "funny pet with curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+    AddDocument(search_server, 4, "funny pet and curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+    AddDocument(search_server, 5, "funny funny pet and nasty nasty rat"s, DocumentStatus::ACTUAL, { 1, 2 });
+    AddDocument(search_server, 6, "funny pet and not very nasty rat"s, DocumentStatus::ACTUAL, { 1, 2 });
+    AddDocument(search_server, 7, "very nasty rat and not very funny pet"s, DocumentStatus::ACTUAL, { 1, 2 });
+    AddDocument(search_server, 8, "pet with rat and rat and rat"s, DocumentStatus::ACTUAL, { 1, 2 });
+    AddDocument(search_server, 9, "nasty rat with curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    std::cout << "Before duplicates removed: "s << search_server.GetDocumentCount() << std::endl;
+    RemoveDuplicates(search_server);
+    std::cout << "After duplicates removed: "s << search_server.GetDocumentCount() << std::endl;
+   
     system("pause");
     return 0;
 }

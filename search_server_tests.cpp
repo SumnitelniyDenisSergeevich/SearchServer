@@ -2,7 +2,7 @@
 
 #include <execution>
 
-void AddDocumentTest() {                 // Тест функции AddDocument
+void AddDocumentTest() {                 
     SearchServer server(std::string{ "" });
     const int doc_id = 42;
     server.AddDocument(doc_id, std::string{ "cat in the city" }, DocumentStatus::ACTUAL, { 1, 2, 3 });
@@ -20,6 +20,40 @@ void AddDocumentTest() {                 // Тест функции AddDocument
     ASSERT_EQUAL(found_docs4.size(), 1u);
     ASSERT_EQUAL(found_docs4[0].id, doc_id);
 }
+
+void Test_GetWordFrequencies() {
+    SearchServer search_server(std::string{ "and with" });
+   
+    search_server.AddDocument(1, std::string{ "funny pet and nasty rat" }, DocumentStatus::ACTUAL, { 7, 2, 7 });
+    search_server.AddDocument(2, std::string{ "funny pet with curly hair" }, DocumentStatus::ACTUAL, { 1, 2 });
+
+    auto word_freq = search_server.GetWordFrequencies(1);
+
+    ASSERT_EQUAL(word_freq.size(), 4);
+    ASSERT_EQUAL(word_freq.at(std::string{ "funny" }), 0.25);
+    ASSERT_EQUAL(word_freq.at(std::string{ "pet" }), 0.25);
+    ASSERT_EQUAL(word_freq.at(std::string{ "nasty" }), 0.25);
+    ASSERT_EQUAL(word_freq.at(std::string{ "rat" }), 0.25);
+}
+
+void Test_RemoveDocument() {
+    SearchServer search_server(std::string{ "and with" });
+
+    search_server.AddDocument(1, std::string{ "funny pet and nasty rat" }, DocumentStatus::ACTUAL, { 7, 2, 7 });
+    search_server.AddDocument(2, std::string{ "funny pet with curly hair" }, DocumentStatus::ACTUAL, { 1, 2 });
+    search_server.AddDocument(3, std::string{ "funny pet and not very nasty rat" }, DocumentStatus::ACTUAL, { 1, 2 });
+    search_server.AddDocument(4, std::string{ "nasty rat with curly hair" }, DocumentStatus::ACTUAL, { 1, 2 });
+
+    search_server.RemoveDocument(2);
+    search_server.RemoveDocument(1);
+
+    auto iter = search_server.begin();
+
+    ASSERT_EQUAL(search_server.GetDocumentCount(), 2);
+    ASSERT_EQUAL(*iter, 3);
+    ASSERT_EQUAL(*(++iter), 4);
+}
+
 
 void Test_ExcludeStopWords_FromAddedDocumentContent() {
     const int doc_id = 42;
@@ -107,22 +141,6 @@ void Test_GetDocumentCount_ResultThreeDocuments() {
     ASSERT_EQUAL(document_count, 3);
 }
 
-void Test_GetDocumentId() {
-    const int doc_id = 42, doc_id1 = 104, doc_id2 = 210;
-    SearchServer server(std::string{ "" });
-    server.AddDocument(doc_id, std::string{ "cat in cool city" }, DocumentStatus::ACTUAL, { 1 });
-    server.AddDocument(doc_id1, std::string{ "dog in perfect world" }, DocumentStatus::ACTUAL, { 1 });
-    server.AddDocument(doc_id2, std::string{ "dog life is best life" }, DocumentStatus::ACTUAL, { 1 });
-
-    int document_id1 = server.GetDocumentId(0);
-    int document_id2 = server.GetDocumentId(1);
-    int document_id3 = server.GetDocumentId(2);
-
-    ASSERT_EQUAL(document_id1, doc_id);
-    ASSERT_EQUAL(document_id2, doc_id1);
-    ASSERT_EQUAL(document_id3, doc_id2);
-}
-
 void TestMatchDocument() {
     const int doc_id = 42;
     SearchServer server(std::string{ "" });
@@ -132,7 +150,7 @@ void TestMatchDocument() {
     const std::string word3 = std::string{ "cool" };
     const std::string word4 = std::string{ "city" };
 
-    {// проверка 1 документа
+    {
         const auto& [find_words, status] = server.MatchDocument(std::string{ "cat in cool city" }, doc_id);
 
         ASSERT(status == DocumentStatus::ACTUAL);
@@ -142,7 +160,7 @@ void TestMatchDocument() {
         ASSERT(count(find_words.begin(), find_words.end(), word4));
         ASSERT_EQUAL(find_words.size(), 4u);
     }
-    {// проверка 1 документа
+    {
         const auto& [find_words, status] = server.MatchDocument(std::string{ "cat bad giy city" }, doc_id);
 
         ASSERT(status == DocumentStatus::ACTUAL);
@@ -151,13 +169,13 @@ void TestMatchDocument() {
         ASSERT_EQUAL(find_words.size(), 2u);
     }
 
-    {// проверка 1 документа
+    {
         const auto& [find_words, status] = server.MatchDocument(std::string{ "dog life is best life" }, doc_id);
 
         ASSERT(status == DocumentStatus::ACTUAL);
         ASSERT(find_words.empty());
     }
-    {// проверка 1 документа
+    {
         const auto& [find_words, status] = server.MatchDocument(std::string{ "" }, doc_id);
 
         ASSERT(status == DocumentStatus::ACTUAL);
@@ -182,9 +200,9 @@ void Test_FindTopDocuments_SortByRelevance() {
     const int doc_id3 = 272;
     const int doc_id4 = 1080;
     const int doc_id5 = 228;
-    SearchServer server = Сreating_Filled_Object(doc_id, doc_id1, doc_id2, doc_id3, doc_id4);   //метод, возвращающий сконструированный объект SearchServer
+    SearchServer server = Сreating_Filled_Object(doc_id, doc_id1, doc_id2, doc_id3, doc_id4);  
 
-    {// проверка 5 документа                                                      
+    {                                                   
         const auto found_docs = server.FindTopDocuments(std::string{ "cat dog" });
 
         ASSERT_EQUAL(found_docs.size(), 3u);
@@ -193,7 +211,7 @@ void Test_FindTopDocuments_SortByRelevance() {
         ASSERT_EQUAL(found_docs[2].id, doc_id3);
     }
 
-    {// проверка 5 документа
+    {
         const auto found_docs = server.FindTopDocuments(std::string{ "cat dog duck good hill" });
 
         ASSERT_EQUAL(found_docs.size(), 5u);
@@ -204,7 +222,7 @@ void Test_FindTopDocuments_SortByRelevance() {
         ASSERT_EQUAL(found_docs[4].id, doc_id1);
     }
 
-    {// проверка 6 документа
+    {
         server.AddDocument(doc_id5, std::string{ "my room is good anouth" }, DocumentStatus::ACTUAL, { 1 });
         const auto found_docs = server.FindTopDocuments(std::string{ "cat dog duck good hill" });
 
@@ -276,7 +294,7 @@ void Test_RelevanceCalculation() {
         });
 
         ASSERT_EQUAL(foundDocs.size(), 2u);
-        ASSERT_EQUAL(foundDocs[0].relevance, relevance_doc_1_and_2);  // частный случай метода, когда входные данные типа double
+        ASSERT_EQUAL(foundDocs[0].relevance, relevance_doc_1_and_2);  
         ASSERT_EQUAL(foundDocs[1].relevance, relevance_doc_1_and_2);
     }
     {
@@ -287,11 +305,11 @@ void Test_RelevanceCalculation() {
     }
 }
 
-
-// Функция TestSearchServer является точкой входа для запуска тестов
 void TestSearchServer() {
     RUN_TEST(Test_ExcludeStopWords_FromAddedDocumentContent);
     RUN_TEST(AddDocumentTest);
+    RUN_TEST(Test_GetWordFrequencies);
+    RUN_TEST(Test_RemoveDocument);
     RUN_TEST(TestExcludedMinusWords_WithOneDocument_ResultEmpty);
     RUN_TEST_WITH_ARG(Test_ExcludedMinusWords_WithOneDocument_ResultFindDocument(std::string{ "cat" }));
     RUN_TEST_WITH_ARG(Test_ExcludedMinusWords_WithOneDocument_ResultFindDocument(std::string{ "cat -dog" }));
@@ -301,7 +319,6 @@ void TestSearchServer() {
     RUN_TEST(TestExcludedMinusWords_FromTwoDocuments_ResultEmpty);
     RUN_TEST(Test_GetDocumentCount_ResultEmpty);
     RUN_TEST(Test_GetDocumentCount_ResultThreeDocuments);
-    RUN_TEST(Test_GetDocumentId);
     RUN_TEST(TestMatchDocument);
     RUN_TEST(Test_FindTopDocuments_SortByRelevance);
     RUN_TEST(Test_CalculateRating);
