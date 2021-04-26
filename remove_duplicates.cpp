@@ -1,42 +1,38 @@
 #include "remove_duplicates.h"
 #include <set>
 #include <vector>
+#include <iterator>
 
 void RemoveDuplicates(SearchServer& search_server) {
-	std::set< std::pair< std::set<std::string>, int > > unic_documents;
-	std::set<std::string> unic_chek;
-	bool b;
+	std::map<std::set<std::string>, int> unic_documents;
+	std::set<std::string> document_checked_uniqueness;
+	bool document_is_unique;
 	std::vector<int> delete_id;
 
 	for (int id : search_server) {
-		unic_chek.clear();
-		b = true;
+		document_checked_uniqueness.clear();
+		document_is_unique = true;
 
 		auto str_freq = search_server.GetWordFrequencies(id);
 
-		for (auto& [str, freq] : str_freq) {
-			unic_chek.insert(str);
-		}
+		std::transform(str_freq.begin(), str_freq.end(), std::inserter(document_checked_uniqueness, document_checked_uniqueness.begin()), [](std::pair<const std::string, double>& T1) { return T1.first; });
 
-		for (auto& [str, id_doc] : unic_documents) {
-			if (str == unic_chek) {
-
-				if (id_doc > id) {
-					delete_id.push_back(id_doc);
-					unic_documents.erase(std::pair{ str, id_doc });
-					unic_documents.insert(std::pair{ str, id });
-				}
-				else {
-					delete_id.push_back(id);
-				}
-
-				b = false;
-				break;
+		if (unic_documents.find(document_checked_uniqueness) != unic_documents.end()) {
+			int doc_id = unic_documents.at(document_checked_uniqueness);
+			if (doc_id > id) {
+				delete_id.push_back(doc_id);
+				unic_documents.erase(document_checked_uniqueness);
+				unic_documents[document_checked_uniqueness] = id;
 			}
+			else {
+				delete_id.push_back(id);
+			}
+
+			document_is_unique = false;
 		}
 
-		if (b) {
-			unic_documents.insert(std::pair{ unic_chek, id });
+		if (document_is_unique) {
+			unic_documents.insert(std::pair{ document_checked_uniqueness, id });
 		}
 	}
 

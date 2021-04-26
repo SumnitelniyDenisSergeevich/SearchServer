@@ -19,6 +19,7 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
     const double inv_word_count = 1.0 / words.size();
     for (const std::string& word : words) {
         word_to_document_freqs_[word][document_id] += inv_word_count;
+        document_to_word_freqs_[document_id][word] += inv_word_count;
     }
     documents_.emplace(document_id, DocumentData{ ComputeAverageRating(ratings), status });
     document_ids_.push_back(document_id);
@@ -36,33 +37,16 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_quer
 }
 
 const std::map<std::string, double>& SearchServer::GetWordFrequencies(int document_id) const {
-    static std::map<std::string, double> result;
-    result.clear();
-
-    for (auto [str, id_freq] : word_to_document_freqs_) {
-        auto iter = id_freq.find(document_id);
-        if (iter != id_freq.end()) {
-            result.insert(std::pair(str, iter->second));
-        }
+    if (document_to_word_freqs_.find(document_id) != document_to_word_freqs_.end()) {
+        return document_to_word_freqs_.at(document_id);
     }
 
-    return result;
+    return  {};
 }
 
 void SearchServer::RemoveDocument(int document_id) {
-    std::vector<std::string> empty_map_words;
-    for (auto& [str, id_freq] : word_to_document_freqs_) {
-        auto iter = id_freq.find(document_id);
-        if (iter != id_freq.end()) {
-            id_freq.erase(iter);
-            if (id_freq.empty()) {
-                empty_map_words.push_back(str);
-            }
-        }
-    }
-
-    for (std::string empty_word : empty_map_words) {
-        word_to_document_freqs_.erase(empty_word);
+    if (document_to_word_freqs_.find(document_id) != document_to_word_freqs_.end()) {
+        document_to_word_freqs_.erase(document_id);
     }
 
     documents_.erase(document_id);
@@ -191,7 +175,6 @@ SearchServer::Query SearchServer::ParseQuery(const std::string& text) const {
     return result;
 }
 
-// Existence required
 double SearchServer::ComputeWordInverseDocumentFreq(const std::string& word) const {
     return log(GetDocumentCount() * 1.0 / word_to_document_freqs_.at(word).size());
 }

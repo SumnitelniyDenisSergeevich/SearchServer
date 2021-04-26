@@ -44,11 +44,11 @@ public:
         return documents_.size();
     }
 
-    [[nodiscard]] inline std::vector<int>::const_iterator begin()  const {
+    [[nodiscard]] inline std::vector<int>::const_iterator begin() const noexcept {
         return document_ids_.begin();
     }
 
-    [[nodiscard]] inline std::vector<int>::const_iterator end() const {
+    [[nodiscard]] inline std::vector<int>::const_iterator end() const noexcept {
         return document_ids_.cend();
     }
 
@@ -73,12 +73,13 @@ private:
 
     struct Query {
         std::set<std::string> plus_words;
-        std::set<std::string> minus_words;
+        std::set<std::string> minus_words;  
     };
 
 
     const std::set<std::string> stop_words_;
     std::map<std::string, std::map<int, double>> word_to_document_freqs_;
+    std::map< int, std::map<std::string, double>> document_to_word_freqs_;
     std::map<int, DocumentData> documents_;
     std::vector<int> document_ids_;
 
