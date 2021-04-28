@@ -5,7 +5,6 @@
 
 void RemoveDuplicates(SearchServer& search_server) {
 	std::map<std::set<std::string>, int> unic_documents;
-	bool document_is_unique;
 	std::vector<int> delete_id;
 
 	for (int id : search_server) {
@@ -15,19 +14,15 @@ void RemoveDuplicates(SearchServer& search_server) {
 
 		std::transform(str_freq.begin(), str_freq.end(), std::inserter(document_checked_uniqueness, document_checked_uniqueness.begin()), [](std::pair<const std::string, double>& T1) { return T1.first; });
 
-		if (auto iter = unic_documents.find(document_checked_uniqueness); iter != unic_documents.end()) {
-			int doc_id = iter->second;
-			if (doc_id > id) {
-				delete_id.push_back(doc_id);
-				unic_documents.erase(document_checked_uniqueness);
+		if (auto [iter, emplace_done] = unic_documents.emplace(std::pair{ document_checked_uniqueness, id}); !emplace_done) {
+			if (iter->second > id) {
+				delete_id.push_back(iter->second);
+				unic_documents.erase(iter);
 				unic_documents[document_checked_uniqueness] = id;
 			}
 			else {
 				delete_id.push_back(id);
 			}
-
-		}else{
-			unic_documents.insert(std::pair{ document_checked_uniqueness, id });
 		}
 	}
 
