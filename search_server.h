@@ -54,8 +54,54 @@ public:
 
     [[nodiscard]] const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
 
+    template<typename ExecutionPolicy>
+    void RemoveDocument(ExecutionPolicy policy, int document_id) {
+        if (auto iter = document_to_word_freqs_.find(document_id); iter != document_to_word_freqs_.end()) {
+
+            std::for_each(policy, iter->second.begin(), iter->second.end(),
+                [this, document_id](std::pair<const std::string, double>& word_freqs) {
+                word_to_document_freqs_.at(word_freqs.first).erase(document_id);
+                if (word_to_document_freqs_.at(word_freqs.first).empty()) {
+                    word_to_document_freqs_.erase(word_freqs.first);
+                }
+            }
+            );
+
+            document_to_word_freqs_.erase(iter);
+            documents_.erase(document_id);
+            document_ids_.erase(std::find(document_ids_.begin(), document_ids_.end(), document_id));
+        }
+    }
+
     void RemoveDocument(int document_id);
 
+    template<typename ExecutionPolicy>
+    [[nodiscard]] std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(ExecutionPolicy policy, const std::string& raw_query, int document_id) const {
+        if (!std::count(document_ids_.begin(), document_ids_.end(), document_id)) {
+            throw std::out_of_range(std::string{ "invalid document id " });
+        }
+        const auto query = ParseQuery(raw_query);
+        std::vector<std::string> matched_words;
+
+        std::for_each(policy, query.plus_words.begin(), query.plus_words.end(),
+            [this, document_id, &matched_words](const std::string& word) {
+            if (word_to_document_freqs_.count(word)) {
+                if (word_to_document_freqs_.at(word).count(document_id)) {
+                    matched_words.push_back(word);
+                }
+            }
+        });
+        std::for_each(policy, query.minus_words.begin(), query.minus_words.end(),
+            [this, document_id, &matched_words](const std::string& word) {
+            if (word_to_document_freqs_.count(word)) {
+                if (word_to_document_freqs_.at(word).count(document_id)) {
+                    matched_words.clear();
+                }
+            }
+        });
+
+        return { matched_words, documents_.at(document_id).status };
+    }
 
     [[nodiscard]] std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query, int document_id) const;
 
@@ -80,6 +126,7 @@ private:
     const std::set<std::string> stop_words_;
     std::map<std::string, std::map<int, double>> word_to_document_freqs_;
     std::map< int, std::map<std::string, double>> document_to_word_freqs_;
+    std::map<std::string, double> empty;
     std::map<int, DocumentData> documents_;
     std::vector<int> document_ids_;
 
@@ -98,13 +145,10 @@ private:
         return stop_words_.count(word) > 0;
     }
 
-    [[nodiscard]] bool CheckingForEmptyMinusWord(const std::string& s) const;
-
-    [[nodiscard]] bool CheckingForDoubleMinus(const std::string& text) const;
-
     [[nodiscard]] static bool CheckingForSpecialSymbols(const std::string& s);
 
     void ChekingRawQuery(const std::string& raw_query) const;
+
 
     [[nodiscard]] std::vector<std::string> SplitIntoWordsNoStop(const std::string& text) const;
 

@@ -14,7 +14,7 @@ void RemoveDuplicates(SearchServer& search_server) {
 
 		std::transform(str_freq.begin(), str_freq.end(), std::inserter(document_checked_uniqueness, document_checked_uniqueness.begin()), [](std::pair<const std::string, double>& T1) { return T1.first; });
 
-		if (auto [iter, emplace_done] = unic_documents.emplace(std::pair{ document_checked_uniqueness, id}); !emplace_done) {
+		if (auto [iter, emplace_done] = unic_documents.emplace(document_checked_uniqueness, id); !emplace_done) {
 			if (iter->second > id) {
 				delete_id.push_back(iter->second);
 				unic_documents.erase(iter);

@@ -41,67 +41,15 @@ const std::map<std::string, double>& SearchServer::GetWordFrequencies(int docume
         return document_to_word_freqs_.at(document_id);
     }
 
-    return  {};
+    return  empty;
 }
 
 void SearchServer::RemoveDocument(int document_id) {
-    if (auto iter = document_to_word_freqs_.find(document_id); iter != document_to_word_freqs_.end()) {
-        
-        for (auto& [word, _] : iter->second) {
-            word_to_document_freqs_.at(word).erase(document_id);
-            if (word_to_document_freqs_.at(word).empty()) {
-                word_to_document_freqs_.erase(word);
-            }
-        }
-
-        document_to_word_freqs_.erase(iter);
-        documents_.erase(document_id);
-        document_ids_.erase(std::find(document_ids_.begin(), document_ids_.end(), document_id));
-    }
+    RemoveDocument(std::execution::seq, document_id);
 }
 
 std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query, int document_id) const {
-    const auto query = ParseQuery(raw_query);
-    std::vector<std::string> matched_words;
-    for (const std::string& word : query.plus_words) {
-        if (word_to_document_freqs_.count(word) == 0) {
-            continue;
-        }
-        if (word_to_document_freqs_.at(word).count(document_id)) {
-            matched_words.push_back(word);
-        }
-    }
-    for (const std::string& word : query.minus_words) {
-        if (word_to_document_freqs_.count(word) == 0) {
-            continue;
-        }
-        if (word_to_document_freqs_.at(word).count(document_id)) {
-            matched_words.clear();
-            break;
-        }
-    }
-    return { matched_words, documents_.at(document_id).status };
-}
-
-bool SearchServer::CheckingForEmptyMinusWord(const std::string& s) const {
-    for (int i = 0; i < s.size(); ++i) {
-        if ((s[i] == '-') && (i == (s.size() - 1))) {
-            return true;
-        }
-        if (s[i] == '-' && s[i + 1] == ' ') {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool SearchServer::CheckingForDoubleMinus(const std::string& text) const {
-    for (int i = 0; i + 1 < text.size(); ++i) {
-        if (text[i] == '-' && text[i + 1] == '-') {
-            return true;
-        }
-    }
-    return false;
+    return MatchDocument(std::execution::par, raw_query, document_id);
 }
 
 bool SearchServer::CheckingForSpecialSymbols(const std::string& s) {
@@ -113,15 +61,21 @@ bool SearchServer::CheckingForSpecialSymbols(const std::string& s) {
 }
 
 void SearchServer::ChekingRawQuery(const std::string& raw_query) const {
+    for (size_t i = 0; i + 1 < raw_query.size(); ++i) {
+        if (raw_query.at(i) == '-' && raw_query.at(i + 1) == '-') {
+            throw std::invalid_argument(std::string{ "invalid query double minus" });
+        }
+        if (raw_query.at(i) == '-' && raw_query.at(i + 1) == ' ') {
+            throw std::invalid_argument(std::string{ "invalid query empty minus word" });
+        }
+    }
+    if (raw_query.at(raw_query.size() - 1) == '-') {
+        throw std::invalid_argument(std::string{ "invalid query empty minus word" });
+    }
     if (CheckingForSpecialSymbols(raw_query)) {
-        throw std::invalid_argument(std::string{ "поисковый запрос содержит специальные символы с кодом от 0 до 31" });
+        throw std::invalid_argument(std::string{ "invalid query special symbols" });
     }
-    if (CheckingForEmptyMinusWord(raw_query)) {
-        throw std::invalid_argument(std::string{ "в документе присутствует пустое минус слово" });
-    }
-    if (CheckingForDoubleMinus(raw_query)) {
-        throw std::invalid_argument(std::string{ "в документе присутствует слово с 2 минусами в начале" });
-    }
+
 }
 
 
@@ -160,7 +114,7 @@ SearchServer::QueryWord SearchServer::ParseQueryWord(const std::string& text) co
         word = word.substr(1);
     }
     if (word.empty() || word[0] == '-' || CheckingForSpecialSymbols(word)) {
-        throw std::invalid_argument(std::string{ "Query word " } +text + std::string{ " is invalid" });
+        throw std::invalid_argument(std::string{ "Query word " } + text + std::string{ " is invalid" });
     }
 
     return { word, is_minus, IsStopWord(word) };
@@ -171,12 +125,7 @@ SearchServer::Query SearchServer::ParseQuery(const std::string& text) const {
     for (const std::string& word : SplitIntoWords(text)) {
         const auto query_word = ParseQueryWord(word);
         if (!query_word.is_stop) {
-            if (query_word.is_minus) {
-                result.minus_words.insert(query_word.data);
-            }
-            else {
-                result.plus_words.insert(query_word.data);
-            }
+            query_word.is_minus ? result.minus_words.insert(query_word.data) : result.plus_words.insert(query_word.data);
         }
     }
     return result;
