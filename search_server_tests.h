@@ -52,7 +52,7 @@ void Test_FindTopDocuments_WithPredicat_EmptySearchServer_ResultEmpty(Func predi
 {
     SearchServer server(std::string{ "" });
 
-    const auto found_docs = server.FindTopDocuments(std::string{ "cat dog" }, predicate);
+    const auto found_docs = server.FindTopDocuments(std::execution::seq,  std::string{ "cat dog" }, predicate);
 
     ASSERT(found_docs.empty());
 }
@@ -64,7 +64,7 @@ void Test_FindTopDocuments_WithPredicat_ResultEmpty(Func predicate)
     SearchServer server(std::string{ "" });
     server.AddDocument(doc_id1, std::string{ "cat in cool city" }, DocumentStatus::ACTUAL, { 1 });
 
-    const auto found_docs = server.FindTopDocuments(std::string{ "cat dog" }, predicate);
+    const auto found_docs = server.FindTopDocuments(std::execution::seq, std::string{ "cat dog" }, predicate);
 
     ASSERT(found_docs.empty());
 }
@@ -76,7 +76,7 @@ void Test_FindTopDocuments_WithPredicat(Func predicate)
     SearchServer server(std::string{ "" });
     server.AddDocument(doc_id1, std::string{ "cat in cool city" }, DocumentStatus::ACTUAL, { 1 });
 
-    const auto found_docs = server.FindTopDocuments(std::string{ "cat dog" }, predicate);
+    const auto found_docs = server.FindTopDocuments(std::execution::seq, std::string{ "cat dog" }, predicate);
 
     ASSERT_EQUAL(found_docs.size(), 1u);
     ASSERT_EQUAL(found_docs[0].id, doc_id1);

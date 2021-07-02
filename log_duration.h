@@ -31,7 +31,7 @@ public:
 
         const auto end_time = Clock::now();
         const auto dur = end_time - start_time_;
-        out_ << id_ << ": "s << duration_cast<milliseconds>(dur).count() << " ms"s << std::endl;
+        out_ << id_ << ": "s << duration_cast<nanoseconds>(dur).count() << " ms"s << std::endl;
     }
 
 private:

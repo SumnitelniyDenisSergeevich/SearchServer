@@ -11,11 +11,11 @@ public:
     explicit RequestQueue(const SearchServer& search_server) : obj_(search_server) {
     }
     template <typename DocumentPredicate>
-    [[nodiscard]] std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentPredicate document_predicate);
+    [[nodiscard]] std::vector<Document> AddFindRequest(const std::string_view& raw_query, DocumentPredicate document_predicate);
 
-    [[nodiscard]] std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentStatus status);
+    [[nodiscard]] std::vector<Document> AddFindRequest(const std::string_view& raw_query, DocumentStatus status);
 
-    [[nodiscard]] std::vector<Document> AddFindRequest(const std::string& raw_query);
+    [[nodiscard]] std::vector<Document> AddFindRequest(const std::string_view& raw_query);
 
     [[nodiscard]] int GetNoResultRequests() const;
 private:
@@ -29,8 +29,8 @@ private:
 };
 
 template <typename DocumentPredicate>
-std::vector<Document> RequestQueue::AddFindRequest(const std::string& raw_query, DocumentPredicate document_predicate) {
-    std::vector<Document> result = obj_.FindTopDocuments(raw_query, document_predicate);
+std::vector<Document> RequestQueue::AddFindRequest(const std::string_view& raw_query, DocumentPredicate document_predicate) {
+    std::vector<Document> result = obj_.FindTopDocuments(std::execution::seq ,raw_query, document_predicate);
     if (!result.empty()) {
         if (requests_.size() >= sec_in_day_) {
             requests_.push_back(QueryResult{ result , true });

@@ -24,7 +24,7 @@ void FindTopDocuments(const SearchServer& search_server, const std::string& raw_
     }
 }
 
-void MatchDocuments(const SearchServer& search_server, const std::string& query) {
+void MatchDocuments(const SearchServer& search_server, const std::string_view& query) {
     try {
         std::cout << std::string{ "Матчинг документов по запросу: " } << query << std::endl;
 
