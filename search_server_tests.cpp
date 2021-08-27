@@ -272,7 +272,7 @@ void Test_FindTopDocuments_WithStatus_ResultFind(DocumentStatus status, int etal
     server.AddDocument(doc_id2, content, DocumentStatus::BANNED, ratings);
     server.AddDocument(doc_id3, content, DocumentStatus::IRRELEVANT, ratings);
 
-    const auto found_docs = server.FindTopDocuments(std::string{ "cat" }, status);
+    const auto found_docs = server.FindTopDocuments(std::execution::seq, std::string{ "cat" }, status);
 
     ASSERT_EQUAL(found_docs.size(), 1u);
     ASSERT_EQUAL(found_docs[0].id, etalonId);

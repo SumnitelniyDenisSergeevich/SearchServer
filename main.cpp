@@ -1,30 +1,52 @@
-#include "search_server_tests.h"
-#include "paginator.h"
-#include "read_input_functions.h"
-#include "request_queue.h"
-#include "remove_duplicates.h"
+#include "process_queries.h"
+#include "search_server.h"
 
-using namespace std::literals;
+#include <execution>
+#include <iostream>
+#include <string>
+#include <vector>
+
+using namespace std;
+
+//void PrintDocument(const Document& document) {
+//    cout << "{ "s
+//        << "document_id = "s << document.id << ", "s
+//        << "relevance = "s << document.relevance << ", "s
+//        << "rating = "s << document.rating << " }"s << endl;
+//}
 
 int main() {
-    TestSearchServer();
-  
     SearchServer search_server("and with"s);
 
-    AddDocument(search_server, 1, "funny pet and nasty rat"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
-    AddDocument(search_server, 2, "funny pet with curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
-    AddDocument(search_server, 3, "funny pet with curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
-    AddDocument(search_server, 4, "funny pet and curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
-    AddDocument(search_server, 5, "funny funny pet and nasty nasty rat"s, DocumentStatus::ACTUAL, { 1, 2 });
-    AddDocument(search_server, 6, "funny pet and not very nasty rat"s, DocumentStatus::ACTUAL, { 1, 2 });
-    AddDocument(search_server, 7, "very nasty rat and not very funny pet"s, DocumentStatus::ACTUAL, { 1, 2 });
-    AddDocument(search_server, 8, "pet with rat and rat and rat"s, DocumentStatus::ACTUAL, { 1, 2 });
-    AddDocument(search_server, 9, "nasty rat with curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+    int id = 0;
+    for (
+        const string& text : {
+            "white cat and yellow hat"s,
+            "curly cat curly tail"s,
+            "nasty dog with big eyes"s,
+            "nasty pigeon john"s,
+        }
+        ) {
+        search_server.AddDocument(++id, text, DocumentStatus::ACTUAL, { 1, 2 });
+    }
 
-    std::cout << "Before duplicates removed: "s << search_server.GetDocumentCount() << std::endl;
-    RemoveDuplicates(search_server);
-    std::cout << "After duplicates removed: "s << search_server.GetDocumentCount() << std::endl;
-   
+
+    cout << "ACTUAL by default:"s << endl;
+    // последовательная версия
+    for (const Document& document : search_server.FindTopDocuments("curly nasty cat"s)) {
+        PrintDocument(document);
+    }
+    cout << "BANNED:"s << endl;
+    // последовательная версия
+    for (const Document& document : search_server.FindTopDocuments(execution::seq, "curly nasty cat"s, DocumentStatus::BANNED)) {
+        PrintDocument(document);
+    }
+
+    cout << "Even ids:"s << endl;
+    // параллельная версия
+    for (const Document& document : search_server.FindTopDocuments(execution::par, "curly nasty cat"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
+        PrintDocument(document);
+    }
     system("pause");
     return 0;
 }
