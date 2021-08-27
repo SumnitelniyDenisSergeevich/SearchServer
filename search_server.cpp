@@ -23,13 +23,24 @@ void SearchServer::AddDocument(int document_id, const std::string_view& document
     document_ids_.push_back(document_id);
 }
 
+std::vector<Document> SearchServer::FindTopDocuments(const std::string_view& raw_query, DocumentStatus status) const {
+    return FindTopDocuments(std::execution::seq, raw_query, status);
+}
 
 std::vector<Document> SearchServer::FindTopDocuments(const std::string_view& raw_query) const {
     return FindTopDocuments(std::execution::seq, raw_query, DocumentStatus::ACTUAL);
 }
 
-std::vector<Document> SearchServer::FindTopDocuments(const std::string_view& raw_query, DocumentStatus status) const {
-    return FindTopDocuments(std::execution::seq, raw_query, status);
+inline int SearchServer::GetDocumentCount() const noexcept {
+    return documents_.size();
+}
+
+std::vector<int>::const_iterator SearchServer::begin() const noexcept {
+    return document_ids_.begin();
+}
+
+std::vector<int>::const_iterator SearchServer::end() const noexcept {
+    return document_ids_.cend();
 }
 
 const std::map<std::string_view, double>& SearchServer::GetWordFrequencies(int document_id) const {
@@ -46,6 +57,18 @@ void SearchServer::RemoveDocument(int document_id) {
 
 std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDocument( std::string_view raw_query, int document_id) const {
     return MatchDocument(std::execution::seq, raw_query, document_id);
+}
+
+inline  bool SearchServer::IsContainWord(const std::string& word) const {
+    return word_to_document_freqs_.count(word);
+}
+
+inline bool SearchServer::IsWordContainId(const std::string& word, const int doc_id) const {
+    return word_to_document_freqs_.at(word).count(doc_id);
+}
+
+inline bool SearchServer::IsStopWord(const std::string& word) const {
+    return stop_words_.count(word) > 0;
 }
 
 bool SearchServer::CheckingForSpecialSymbols(const std::string_view& s) {

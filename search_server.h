@@ -16,6 +16,8 @@
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 
+using namespace std::string_literals;
+
 class SearchServer {
 public:
     template <typename StringContainer>
@@ -24,7 +26,7 @@ public:
     {
         for (const std::string& word : stop_words_) {
             if (CheckingForSpecialSymbols(word)) {
-                throw std::invalid_argument(std::string{ "стоп слова содержат специальные символы с кодом от 0 до 31" });
+                throw std::invalid_argument("стоп слова содержат специальные символы с кодом от 0 до 31"s);
             }
         }
     }
@@ -41,83 +43,28 @@ public:
 
     template <typename DocumentPredicate, typename ExecutionPolicy>
     [[nodiscard]] std::vector<Document> FindTopDocuments(ExecutionPolicy policy, const std::string_view& raw_query, DocumentPredicate document_predicate) const;
-
     template <typename DocumentPredicate>
     [[nodiscard]] std::vector<Document> FindTopDocuments(const std::string_view& raw_query, DocumentPredicate document_predicate) const;
-
-    void AddDocument(int document_id, const std::string_view& document, DocumentStatus status, const std::vector<int>& ratings);
-
     template <typename ExecutionPolicy>
     [[nodiscard]] std::vector<Document> FindTopDocuments(ExecutionPolicy policy, const std::string_view& raw_query, DocumentStatus status) const;
-
-    [[nodiscard]] std::vector<Document> FindTopDocuments( const std::string_view& raw_query, DocumentStatus status) const;
-
+    [[nodiscard]] std::vector<Document> FindTopDocuments(const std::string_view& raw_query, DocumentStatus status) const;
     [[nodiscard]] std::vector<Document> FindTopDocuments(const std::string_view& raw_query) const;
 
-    [[nodiscard]] inline int GetDocumentCount() const noexcept {
-        return documents_.size();
-    }
+    void AddDocument(int document_id, const std::string_view& document, DocumentStatus status, const std::vector<int>& ratings);
+    
+    [[nodiscard]] inline int GetDocumentCount() const noexcept;
 
-    [[nodiscard]] inline std::vector<int>::const_iterator begin() const noexcept {
-        return document_ids_.begin();
-    }
-
-    [[nodiscard]] inline std::vector<int>::const_iterator end() const noexcept {
-        return document_ids_.cend();
-    }
+    [[nodiscard]] std::vector<int>::const_iterator begin() const noexcept;
+    [[nodiscard]] std::vector<int>::const_iterator end() const noexcept;
 
     [[nodiscard]] const std::map<std::string_view, double>& GetWordFrequencies(int document_id) const;
 
     template<typename ExecutionPolicy>
-    void RemoveDocument(ExecutionPolicy policy, int document_id) {
-        if (auto iter = document_to_word_freqs_.find(document_id); iter != document_to_word_freqs_.end()) {
-            
-            std::for_each(policy, iter->second.begin(), iter->second.end(),
-                [this, document_id](std::pair<const std::string_view, double>& word_freqs) {
-                std::string word = static_cast<std::string>(word_freqs.first);
-                word_to_document_freqs_.at(word).erase(document_id);
-                if (word_to_document_freqs_.at(word).empty()) {
-                    word_to_document_freqs_.erase(word);
-                }
-            }
-            );
-            document_to_word_freqs_.erase(iter);
-            documents_.erase(document_id);
-            document_ids_.erase(std::find(document_ids_.begin(), document_ids_.end(), document_id));
-        }
-    }
-
+    void RemoveDocument(ExecutionPolicy policy, int document_id);
     void RemoveDocument(int document_id);
 
     template<typename ExecutionPolicy>
-    [[nodiscard]] std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(ExecutionPolicy policy, std::string_view raw_query, int document_id) const {
-        if (!std::count(document_ids_.begin(), document_ids_.end(), document_id)) {
-            throw std::out_of_range(std::string{ "invalid document id " });
-        }
-        ChekingRawQuery(raw_query);
-        const auto query = ParseQuery(raw_query);
-        std::vector<std::string_view> matched_words;
-
-        std::for_each(policy, query.plus_words.begin(), query.plus_words.end(),
-            [this, document_id, &matched_words](const std::string& word) {
-            if (word_to_document_freqs_.count(word)) {
-                if (word_to_document_freqs_.at(word).count(document_id)) {
-                    matched_words.push_back(word_to_document_freqs_.find(word)->first);
-                }
-            }
-        });
-        std::for_each(policy, query.minus_words.begin(), query.minus_words.end(),
-            [this, document_id, &matched_words](const std::string& word) {
-            if (word_to_document_freqs_.count(word)) {
-                if (word_to_document_freqs_.at(word).count(document_id)) {
-                    matched_words.clear();
-                }
-            }
-        });
-
-        return { matched_words, documents_.at(document_id).status };
-    }
-
+    [[nodiscard]] std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(ExecutionPolicy policy, std::string_view raw_query, int document_id) const;
     [[nodiscard]] std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument( std::string_view raw_query, int document_id) const;
 
 private:
@@ -147,29 +94,20 @@ private:
     template <typename DocumentPredicate, typename ExecutionPolicy>
     [[nodiscard]] std::vector<Document> FindAllDocuments(ExecutionPolicy policy,const Query& query, DocumentPredicate document_predicate) const;
 
-    [[nodiscard]] inline  bool IsContainWord(const std::string& word) const {
-        return word_to_document_freqs_.count(word);
-    }
+    [[nodiscard]] inline  bool IsContainWord(const std::string& word) const;
+    [[nodiscard]] inline bool IsWordContainId(const std::string& word, const int doc_id) const;
 
-    [[nodiscard]] inline bool IsWordContainId(const std::string& word, const int doc_id) const {
-        return word_to_document_freqs_.at(word).count(doc_id);
-    }
-
-    [[nodiscard]] inline bool IsStopWord(const std::string& word) const {
-        return stop_words_.count(word) > 0;
-    }
+    [[nodiscard]] inline bool IsStopWord(const std::string& word) const;
 
     [[nodiscard]] static bool CheckingForSpecialSymbols(const std::string_view& s);
 
     void ChekingRawQuery(const std::string_view& raw_query) const;
-
 
     [[nodiscard]] std::vector<std::string> SplitIntoWordsNoStop(const std::string_view& text) const;
 
     [[nodiscard]] static int ComputeAverageRating(const std::vector<int>& ratings);
 
     [[nodiscard]] QueryWord ParseQueryWord( std::string_view text) const;
-
     [[nodiscard]] Query ParseQuery( std::string_view text) const;
 
     [[nodiscard]] double ComputeWordInverseDocumentFreq(const std::string& word) const;
@@ -204,6 +142,54 @@ template <typename ExecutionPolicy>
 template <typename DocumentPredicate>
 [[nodiscard]] std::vector<Document> SearchServer::FindTopDocuments(const std::string_view& raw_query, DocumentPredicate document_predicate) const {
     return FindTopDocuments(std::execution::seq, raw_query, document_predicate);
+}
+
+template<typename ExecutionPolicy>
+void SearchServer::RemoveDocument(ExecutionPolicy policy, int document_id) {
+    if (auto iter = document_to_word_freqs_.find(document_id); iter != document_to_word_freqs_.end()) {
+
+        std::for_each(policy, iter->second.begin(), iter->second.end(),
+            [this, document_id](std::pair<const std::string_view, double>& word_freqs) {
+            std::string word = static_cast<std::string>(word_freqs.first);
+            word_to_document_freqs_.at(word).erase(document_id);
+            if (word_to_document_freqs_.at(word).empty()) {
+                word_to_document_freqs_.erase(word);
+            }
+        }
+        );
+        document_to_word_freqs_.erase(iter);
+        documents_.erase(document_id);
+        document_ids_.erase(std::find(document_ids_.begin(), document_ids_.end(), document_id));
+    }
+}
+
+template<typename ExecutionPolicy>
+[[nodiscard]] std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDocument(ExecutionPolicy policy, std::string_view raw_query, int document_id) const {
+    if (!std::count(document_ids_.begin(), document_ids_.end(), document_id)) {
+        throw std::out_of_range( "invalid document id "s);
+    }
+    ChekingRawQuery(raw_query);
+    const auto query = ParseQuery(raw_query);
+    std::vector<std::string_view> matched_words;
+
+    std::for_each(policy, query.plus_words.begin(), query.plus_words.end(),
+        [this, document_id, &matched_words](const std::string& word) {
+        if (word_to_document_freqs_.count(word)) {
+            if (word_to_document_freqs_.at(word).count(document_id)) {
+                matched_words.push_back(word_to_document_freqs_.find(word)->first);
+            }
+        }
+    });
+    std::for_each(policy, query.minus_words.begin(), query.minus_words.end(),
+        [this, document_id, &matched_words](const std::string& word) {
+        if (word_to_document_freqs_.count(word)) {
+            if (word_to_document_freqs_.at(word).count(document_id)) {
+                matched_words.clear();
+            }
+        }
+    });
+
+    return { matched_words, documents_.at(document_id).status };
 }
 
 template <typename DocumentPredicate, typename ExecutionPolicy>
