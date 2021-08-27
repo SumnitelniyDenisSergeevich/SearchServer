@@ -2,17 +2,19 @@
 
 #include <string>
 
+using namespace std::string_literals;
+
 std::ostream& operator<<(std::ostream& out, const Document& document) {
-    out << std::string{ "{ " }
-        << std::string{ "document_id = " } << document.id << std::string{ ", " }
-        << std::string{ "relevance = " } << document.relevance << std::string{ ", " }
-    << std::string{ "rating = " } << document.rating << std::string{ " }" };
+    out << "{ "s
+        << "document_id = "s << document.id << ", "s
+        << "relevance = "s << document.relevance << ", "s
+    << "rating = "s << document.rating << " }"s;
     return out;
 }
 
 void PrintDocument(const Document& document) {
-    std::cout << std::string{ "{ " }
-        << std::string{ "document_id = " } << document.id << std::string{ ", " }
-        << std::string{ "relevance = " } << document.relevance << std::string{ ", " }
-    << std::string{ "rating = " } << document.rating << std::string{ " }" } << std::endl;
+    std::cout << "{ "s
+        << "document_id = "s << document.id << ", "s
+        << "relevance = "s << document.relevance << ", "s
+        << "rating = "s << document.rating << " }"s << std::endl;
 }

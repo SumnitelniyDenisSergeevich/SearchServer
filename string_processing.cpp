@@ -2,19 +2,6 @@
 
 #include <iostream>
 
-std::string ReadLine() {
-    std::string s;
-    getline(std::cin, s);
-    return s;
-}
-
-int ReadLineWithNumber() {
-    int result;
-    std::cin >> result;
-    ReadLine();
-    return result;
-}
-
 std::vector < std::string_view > SplitIntoWords(std::string_view str) {
     std::vector<std::string_view> result;
     const int64_t pos_end = str.npos;

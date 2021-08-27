@@ -45,7 +45,7 @@ void SearchServer::RemoveDocument(int document_id) {
 }
 
 std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDocument( std::string_view raw_query, int document_id) const {
-    return MatchDocument(std::execution::par, raw_query, document_id);
+    return MatchDocument(std::execution::seq, raw_query, document_id);
 }
 
 bool SearchServer::CheckingForSpecialSymbols(const std::string_view& s) {

@@ -12,9 +12,7 @@ public:
     }
     template <typename DocumentPredicate>
     [[nodiscard]] std::vector<Document> AddFindRequest(const std::string_view& raw_query, DocumentPredicate document_predicate);
-
     [[nodiscard]] std::vector<Document> AddFindRequest(const std::string_view& raw_query, DocumentStatus status);
-
     [[nodiscard]] std::vector<Document> AddFindRequest(const std::string_view& raw_query);
 
     [[nodiscard]] int GetNoResultRequests() const;
