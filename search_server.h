@@ -147,7 +147,6 @@ template <typename DocumentPredicate>
 template<typename ExecutionPolicy>
 void SearchServer::RemoveDocument(ExecutionPolicy policy, int document_id) {
     if (auto iter = document_to_word_freqs_.find(document_id); iter != document_to_word_freqs_.end()) {
-
         std::for_each(policy, iter->second.begin(), iter->second.end(),
             [this, document_id](std::pair<const std::string_view, double>& word_freqs) {
             std::string word = static_cast<std::string>(word_freqs.first);
@@ -196,20 +195,18 @@ template <typename DocumentPredicate, typename ExecutionPolicy>
 std::vector<Document> SearchServer::FindAllDocuments(ExecutionPolicy policy, const Query& query, DocumentPredicate document_predicate) const {
 
     ConcurrentMap<int, double> document_to_relevance_con(4);
-    {
-        std::for_each(policy, query.plus_words.begin(), query.plus_words.end(), [this, document_predicate, &document_to_relevance_con](const std::string& word) {
-            if (word_to_document_freqs_.count(word) == 0) {
-            }
-            else {
-                std::for_each( word_to_document_freqs_.at(word).begin(), word_to_document_freqs_.at(word).end(), [this, document_predicate, &document_to_relevance_con, &word](const std::pair<int, double>& val) {
-                    const auto& document_data = documents_.at(val.first);
-                    if (document_predicate(val.first, document_data.status, document_data.rating)) {
-                        document_to_relevance_con[val.first].ref_to_value += val.second * ComputeWordInverseDocumentFreq(word);
-                    }
-                });
-            }
-        });
-    }
+    
+    std::for_each(policy, query.plus_words.begin(), query.plus_words.end(), [this, document_predicate, &document_to_relevance_con](const std::string& word) {
+        if (word_to_document_freqs_.count(word) != 0) {
+            std::for_each(word_to_document_freqs_.at(word).begin(), word_to_document_freqs_.at(word).end(), [this, document_predicate, &document_to_relevance_con, &word](const std::pair<int, double>& val) {
+                const auto& document_data = documents_.at(val.first);
+                if (document_predicate(val.first, document_data.status, document_data.rating)) {
+                    document_to_relevance_con[val.first].ref_to_value += val.second * ComputeWordInverseDocumentFreq(word);
+                }
+            });
+        }
+    });
+
     std::map<int, double> document_to_relevance = std::move(document_to_relevance_con.BuildOrdinaryMap());
 
     for (const std::string& word : query.minus_words) {
