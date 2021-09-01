@@ -20,7 +20,7 @@ void SearchServer::AddDocument(int document_id, const std::string_view& document
         document_to_word_freqs_[document_id][word_to_document_freqs_.find(word)->first] += inv_word_count;
     }
     documents_.emplace(document_id, DocumentData{ ComputeAverageRating(ratings), status });
-    document_ids_.push_back(document_id);
+    document_ids_.insert(document_id);
 }
 
 std::vector<Document> SearchServer::FindTopDocuments(const std::string_view& raw_query, DocumentStatus status) const {
@@ -31,15 +31,15 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string_view& raw
     return FindTopDocuments(std::execution::seq, raw_query, DocumentStatus::ACTUAL);
 }
 
-inline int SearchServer::GetDocumentCount() const noexcept {
+int SearchServer::GetDocumentCount() const noexcept {
     return documents_.size();
 }
 
-std::vector<int>::const_iterator SearchServer::begin() const noexcept {
+std::set<int>::const_iterator SearchServer::begin() const noexcept {
     return document_ids_.begin();
 }
 
-std::vector<int>::const_iterator SearchServer::end() const noexcept {
+std::set<int>::const_iterator SearchServer::end() const noexcept {
     return document_ids_.cend();
 }
 
@@ -59,15 +59,15 @@ std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDoc
     return MatchDocument(std::execution::seq, raw_query, document_id);
 }
 
-inline  bool SearchServer::IsContainWord(const std::string& word) const {
+bool SearchServer::IsContainWord(const std::string& word) const {
     return word_to_document_freqs_.count(word);
 }
 
-inline bool SearchServer::IsWordContainId(const std::string& word, const int doc_id) const {
+bool SearchServer::IsWordContainId(const std::string& word, const int doc_id) const {
     return word_to_document_freqs_.at(word).count(doc_id);
 }
 
-inline bool SearchServer::IsStopWord(const std::string& word) const {
+bool SearchServer::IsStopWord(const std::string& word) const {
     return stop_words_.count(word) > 0;
 }
 
